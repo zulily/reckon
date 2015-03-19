@@ -13,6 +13,30 @@ type Statistics struct {
 	stdDev float64
 }
 
+// powerOfTwo returns the smallest power of two that is greater than or equal to `n`
+func powerOfTwo(n int) int {
+	p := 1
+	for p < n {
+		p = p * 2
+	}
+	return p
+}
+
+func ComputePowerOfTwoFreq(m map[int]int64) map[int]int64 {
+	pf := make(map[int]int64)
+
+	for k, v := range m {
+		p := powerOfTwo(k)
+		if existing, ok := pf[p]; ok {
+			pf[p] = existing + v
+		} else {
+			pf[p] = v
+		}
+	}
+
+	return pf
+}
+
 // computes descriptive statistics about our frequency maps
 func ComputeStatistics(m map[int]int64) Statistics {
 	stats := Statistics{}

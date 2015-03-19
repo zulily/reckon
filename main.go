@@ -50,7 +50,9 @@ func main() {
 
 	for k, v := range stats {
 		//		fmt.Printf("%s: %#v\n", k, v)
-		pretty.Print(k, v)
+		pretty.Print(k, v, "\n")
+		pretty.Print(sampler.ComputeStatistics(v.SetSizes), "\n")
+		pretty.Print(sampler.ComputePowerOfTwoFreq(v.SetSizes), "\n")
 		//fmt.Printf("stats for: %s\n", k)
 		//sampler.RenderStats(v)
 	}
