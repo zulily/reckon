@@ -1,11 +1,11 @@
 package sampler
 
 import (
-	"os"
+	"io"
 	"text/template"
 )
 
-func sumValues(m map[string]int64) int64 {
+func sumValues(m map[int]int64) int64 {
 	var sum int64
 	for _, v := range m {
 		sum += v
@@ -14,7 +14,7 @@ func sumValues(m map[string]int64) int64 {
 }
 
 const (
-	TmplStats = `# of keys: {{.Keys}}
+	statsTempl = `# of keys: {{.Keys}}
 
 {{if .StringKeys}}
 Strings ({{sumValues .StringSizes}}):
@@ -75,9 +75,8 @@ Hashs ({{sumValues .HashSizes}}):
 {{end}}`
 )
 
-// RenderStats renders a Stats instance to stdout
-func RenderStats(s *Stats) error {
-
-	t := template.Must(template.New("stats").Funcs(template.FuncMap{"sumValues": sumValues}).Parse(TmplStats))
-	return t.Execute(os.Stdout, s)
+// RenderText renders a Stats instance to the supplied io.Writer
+func RenderText(s *Results, out io.Writer) error {
+	t := template.Must(template.New("stats").Funcs(template.FuncMap{"sumValues": sumValues}).Parse(statsTempl))
+	return t.Execute(out, s)
 }
