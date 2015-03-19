@@ -1,6 +1,7 @@
 package sampler
 
 import (
+	"fmt"
 	"io"
 	"text/template"
 )
@@ -13,32 +14,41 @@ func sumValues(m map[int]int64) int64 {
 	return sum
 }
 
+func percentage(n, total int64) string {
+	return fmt.Sprintf("%.2f%%", 100.0*float64(n)/float64(total))
+}
+
 const (
-	statsTempl = `# of keys: {{.Keys}}
+	statsTempl = `# of keys: {{.KeyCount}}
 
 {{if .StringKeys}}
-Strings ({{sumValues .StringSizes}}):
+{{ $ss := sumValues .StringSizes }}
+Strings ({{$ss}}):
   Sample Keys:
 	{{ range $k, $v := .StringKeys}} {{$k}}
 	{{end}}
-
 	Sizes:
-	{{ range $size, $count := .StringSizes}} {{$size}}: {{$count}},
+	{{ range $s, $c := .StringSizes}} {{$s}}: {{$c}} ({{percentage $c $ss }}),
 	{{end}}
 {{end}}
 
 {{if .SetKeys}}
+{{ $ss := sumValues .SetSizes}}
 Sets ({{sumValues .SetSizes}}):
   Sample Keys:
 	{{ range $k, $v := .SetKeys}} {{$k}}
 	{{end}}
-
 	Sizes:
-	{{ range $size, $count := .SetSizes}} {{$size}}: {{$count}},
+	{{ range $s, $c := .SetSizes}} {{$s}}: {{$c}} ({{percentage $c $ss }}),
 	{{end}}
-
+	Power of 2 Sizes:
+	{{ range $s, $c := power .SetSizes}} {{$s}}: {{$c}} ({{percentage $c $ss }}),
+	{{end}}
 	Element Sizes:
-	{{ range $s, $c := .SetElementSizes}} {{$s}}: {{$c}},
+	{{ range $s, $c := .SetElementSizes}} {{$s}}: {{$c}} ({{percentage $c $ss }}),
+	{{end}}
+	Power of 2 Element Sizes:
+	{{ range $s, $c := power .SetElementSizes}} {{$s}}: {{$c}} ({{percentage $c $ss }}),
 	{{end}}
 {{end}}
 
@@ -47,11 +57,9 @@ SortedSets ({{sumValues .SortedSetSizes}}):
   Sample Keys:
 	{{ range $k, $v := .SortedSetKeys}} {{$k}}
 	{{end}}
-
 	Sizes:
-	{{ range $size, $count := .SortedSetSizes}} {{$size}}: {{$count}},
+	{{ range $s, $c := .SortedSetSizes}} {{$s}}: {{$c}},
 	{{end}}
-
 	Element Sizes:
 	{{ range $s, $c := .SortedSetElementSizes}} {{$s}}: {{$c}},
 	{{end}}
@@ -62,9 +70,8 @@ Hashs ({{sumValues .HashSizes}}):
   Sample Keys:
 	{{ range $k, $v := .HashKeys}} {{$k}}
 	{{end}}
-
 	Sizes:
-	{{ range $size, $count := .HashSizes}} {{$size}}: {{$count}},
+	{{ range $s, $c := .HashSizes}} {{$s}}: {{$c}},
 	{{end}}
 	Element Sizes:
 	{{ range $s, $c := .HashElementSizes}} {{$s}}: {{$c}},
@@ -75,8 +82,20 @@ Hashs ({{sumValues .HashSizes}}):
 {{end}}`
 )
 
-// RenderText renders a Stats instance to the supplied io.Writer
+// RenderText renders a Results instance to the supplied io.Writer
 func RenderText(s *Results, out io.Writer) error {
-	t := template.Must(template.New("stats").Funcs(template.FuncMap{"sumValues": sumValues}).Parse(statsTempl))
+
+	s.StringKeys = trim(s.StringKeys, 5)
+	s.SetKeys = trim(s.SetKeys, 5)
+	s.SortedSetKeys = trim(s.SortedSetKeys, 5)
+	s.HashKeys = trim(s.HashKeys, 5)
+	s.ListKeys = trim(s.ListKeys, 5)
+
+	fm := template.FuncMap{
+		"sumValues":  sumValues,
+		"percentage": percentage,
+		"power":      ComputePowerOfTwoFreq,
+	}
+	t := template.Must(template.New("stats").Funcs(fm).Parse(statsTempl))
 	return t.Execute(out, s)
 }

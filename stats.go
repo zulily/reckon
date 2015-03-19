@@ -172,6 +172,21 @@ func union(a map[string]bool, b map[string]bool) {
 	}
 }
 
+// trim creates a new set, consisting of up to `n` random members from set `s`.
+// If `len(s)` < `n`, the returned map will be of length `len(s)`. Set `s`
+// remains unmodified.
+func trim(s map[string]bool, n int) map[string]bool {
+	t := make(map[string]bool)
+	// map iteration is random in golang!
+	for k := range s {
+		t[k] = true
+		if len(t) == n {
+			break
+		}
+	}
+	return t
+}
+
 // Merge adds the results from `other` into the method receiver.  This method
 // can be used to combine sampling results from multiple redis instances into a
 // single result set.

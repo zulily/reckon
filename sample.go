@@ -227,10 +227,21 @@ func Run(opts Options, aggregator Aggregator) (map[string]*Results, error) {
 		return stats, err
 	}
 
+	interval := opts.NumKeys / 100
+	if interval == 0 {
+		interval = 100
+	}
+	lastInterval := 0
+
 	for i := 0; i < opts.NumKeys; i++ {
 		key, vt, err := randomKey(conn)
 		if err != nil {
 			return stats, err
+		}
+
+		if i/interval != lastInterval {
+			fmt.Printf("sampled %d keys from redis at: %s:%d...\n", i, opts.Host, opts.Port)
+			lastInterval = i / interval
 		}
 
 		switch ValueType(vt) {

@@ -45,6 +45,7 @@ func main() {
 	for _, redis := range redises {
 		go func(opts sampler.Options) {
 			defer wg.Done()
+			fmt.Printf("Sampling %d keys from redis at: %s:%d...\n", opts.NumKeys, opts.Host, opts.Port)
 			s, err := sampler.Run(opts, aggregator)
 			results <- samplerResult{s: s, err: err}
 		}(redis)
