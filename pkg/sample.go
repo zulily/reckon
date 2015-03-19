@@ -103,7 +103,7 @@ func sampleList(key string, conn redis.Conn, aggregator Aggregator, stats map[st
 	}
 
 	if len(replies) >= 2 {
-		l, err := redis.Int64(replies[0], err)
+		l, err := redis.Int(replies[0], err)
 		if err != nil {
 			return err
 		}
@@ -129,7 +129,7 @@ func sampleSet(key string, conn redis.Conn, aggregator Aggregator, stats map[str
 	}
 
 	if len(replies) >= 2 {
-		l, err := redis.Int64(replies[0], err)
+		l, err := redis.Int(replies[0], err)
 		if err != nil {
 			return err
 		}
@@ -156,7 +156,7 @@ func sampleSortedSet(key string, conn redis.Conn, aggregator Aggregator, stats m
 	}
 
 	if len(replies) >= 2 {
-		l, err := redis.Int64(replies[0], err)
+		l, err := redis.Int(replies[0], err)
 		if err != nil {
 			return err
 		}
@@ -185,7 +185,7 @@ func sampleHash(key string, conn redis.Conn, aggregator Aggregator, stats map[st
 		for _, g := range aggregator.Groups(key, TypeHash) {
 
 			// TODO: Let's not always get the first hash field, like the orig. sampler
-			l, err := redis.Int64(replies[0], err)
+			l, err := redis.Int(replies[0], err)
 			if err != nil {
 				return err
 			}

@@ -2,9 +2,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"strings"
+
+	"github.com/kr/pretty"
 
 	sampler "core-gitlab.corp.zulily.com/core/sampler/pkg"
 )
@@ -49,8 +50,8 @@ func main() {
 
 	for k, v := range stats {
 		//		fmt.Printf("%s: %#v\n", k, v)
-		//		pretty.Print(k, v)
-		fmt.Printf("stats for: %s\n", k)
-		sampler.RenderStats(v)
+		pretty.Print(k, v)
+		//fmt.Printf("stats for: %s\n", k)
+		//sampler.RenderStats(v)
 	}
 }
