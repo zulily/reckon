@@ -14,72 +14,79 @@ func sumValues(m map[int]int64) int64 {
 	return sum
 }
 
+func fmtFloat(n float64) string {
+	return fmt.Sprintf("%.2f", n)
+}
+
 func percentage(n, total int64) string {
 	return fmt.Sprintf("%.2f%%", 100.0*float64(n)/float64(total))
 }
 
 const (
-	statsTempl = `# of keys: {{.KeyCount}}
+	statsTempl = `
+{{define "base"}}
+# of keys: {{.KeyCount}}
 
-{{if .StringKeys}}
-{{ $ss := sumValues .StringSizes }}
-Strings ({{$ss}}):
-  Sample Keys:
-	{{ range $k, $v := .StringKeys}} {{$k}}
-	{{end}}
-	Sizes:
-	{{ range $s, $c := .StringSizes}} {{$s}}: {{$c}} ({{percentage $c $ss }}),
-	{{end}}
-{{end}}
+{{ if .StringKeys }}
+--- Strings ({{sumValues .StringSizes}}) ---
+{{template "exampleKeys" .StringKeys}}
+Sizes ({{template "stats" .StringSizes}}):
+{{template "freq" .StringSizes}}
+{{template "freq" power .StringSizes}}{{end}}
 
-{{if .SetKeys}}
-{{ $ss := sumValues .SetSizes}}
-Sets ({{sumValues .SetSizes}}):
-  Sample Keys:
-	{{ range $k, $v := .SetKeys}} {{$k}}
-	{{end}}
-	Sizes:
-	{{ range $s, $c := .SetSizes}} {{$s}}: {{$c}} ({{percentage $c $ss }}),
-	{{end}}
-	Power of 2 Sizes:
-	{{ range $s, $c := power .SetSizes}} {{$s}}: {{$c}} ({{percentage $c $ss }}),
-	{{end}}
-	Element Sizes:
-	{{ range $s, $c := .SetElementSizes}} {{$s}}: {{$c}} ({{percentage $c $ss }}),
-	{{end}}
-	Power of 2 Element Sizes:
-	{{ range $s, $c := power .SetElementSizes}} {{$s}}: {{$c}} ({{percentage $c $ss }}),
-	{{end}}
-{{end}}
+{{ if .SetKeys }}
+--- Sets ({{sumValues .SetSizes}}) ---
+{{template "exampleKeys" .SetKeys}}
+Sizes ({{template "stats" .SetSizes}}):
+{{template "freq" .SetSizes}}
+^2 Sizes:{{template "freq" power .SetSizes}}
+Element Sizes:{{template "freq" .SetElementSizes}}
+Element ^2 Sizes:{{template "freq" power .SetElementSizes}}{{end}}
 
-{{if .SortedSetKeys}}
-SortedSets ({{sumValues .SortedSetSizes}}):
-  Sample Keys:
-	{{ range $k, $v := .SortedSetKeys}} {{$k}}
-	{{end}}
-	Sizes:
-	{{ range $s, $c := .SortedSetSizes}} {{$s}}: {{$c}},
-	{{end}}
-	Element Sizes:
-	{{ range $s, $c := .SortedSetElementSizes}} {{$s}}: {{$c}},
-	{{end}}
-{{end}}
+{{ if .SortedSetKeys }}
+--- Sorted Sets ({{sumValues .SortedSetSizes}}) ---
+{{template "exampleKeys" .SortedSetKeys}}
+Sizes ({{template "stats" .SortedSetSizes}}):
+{{template "freq" .SortedSetSizes}}
+^2 Sizes:{{template "freq" power .SortedSetSizes}}
+Element Sizes ({{template "stats" .SortedSetElementSizes}}):
+{{template "freq" .SortedSetElementSizes}}
+Element ^2 Sizes:{{template "freq" power .SortedSetElementSizes}}{{end}}
 
-{{if .HashKeys}}
-Hashs ({{sumValues .HashSizes}}):
-  Sample Keys:
-	{{ range $k, $v := .HashKeys}} {{$k}}
-	{{end}}
-	Sizes:
-	{{ range $s, $c := .HashSizes}} {{$s}}: {{$c}},
-	{{end}}
-	Element Sizes:
-	{{ range $s, $c := .HashElementSizes}} {{$s}}: {{$c}},
-	{{end}}
-	Value Sizes:
-	{{ range $s, $c := .HashValueSizes}} {{$s}}: {{$c}},
-	{{end}}
-{{end}}`
+{{ if .HashKeys }}
+--- Hashes ({{sumValues .HashSizes}}) ---
+{{template "exampleKeys" .HashKeys}}
+Sizes ({{template "stats" .HashSizes}}):
+{{template "freq" .HashSizes}}
+^2 Sizes:{{template "freq" power .HashSizes}}
+Element Sizes ({{template "stats" .HashElementSizes}}):
+{{template "freq" .HashElementSizes}}
+^2 Element Sizes:{{template "freq" power .HashElementSizes}}
+Value Sizes ({{template "stats" .HashValueSizes}}):
+{{template "freq" .HashValueSizes}}
+^2 Value Sizes:{{template "freq" power .HashValueSizes}}{{end}}
+
+{{ if .ListKeys }}
+--- Lists ({{sumValues .ListSizes}}) ---
+{{template "exampleKeys" .ListKeys}}
+Sizes ({{template "stats" .ListSizes}}):
+{{template "freq" .ListSizes}}
+^2 Sizes:{{template "freq" power .ListSizes}}
+Element Sizes ({{template "stats" .ListElementSizes}}):
+{{template "freq" .ListElementSizes}}
+^2 Element Sizes{{template "freq" power .ListElementSizes}}
+{{end}}{{end}}
+
+{{define "stats"}}{{ with stats . }}min: {{.Min}} max: {{.Max}} mean: {{fmtFloat .Mean}} std dev: {{fmtFloat .StdDev}}{{end}}{{end}}
+
+{{define "exampleKeys"}}Example Keys:
+{{range $k, $v := .}} {{$k}}
+{{end}}{{end}}
+
+{{define "freq"}}
+{{ $ss := sumValues . }}{{ range $s, $c := .}} {{$s}}: {{$c}} ({{percentage $c $ss }})
+{{end}}{{end}}
+`
 )
 
 // RenderText renders a Results instance to the supplied io.Writer
@@ -95,7 +102,9 @@ func RenderText(s *Results, out io.Writer) error {
 		"sumValues":  sumValues,
 		"percentage": percentage,
 		"power":      ComputePowerOfTwoFreq,
+		"stats":      ComputeStatistics,
+		"fmtFloat":   fmtFloat,
 	}
-	t := template.Must(template.New("stats").Funcs(fm).Parse(statsTempl))
-	return t.Execute(out, s)
+	t := template.Must(template.New("output").Funcs(fm).Parse(statsTempl))
+	return t.ExecuteTemplate(out, "base", s)
 }

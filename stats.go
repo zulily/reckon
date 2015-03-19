@@ -8,10 +8,10 @@ const (
 
 // Statistics are basic descriptive statistics that summarize data in a frequency table
 type Statistics struct {
-	mean   float64
-	min    int
-	max    int
-	stdDev float64
+	Mean   float64
+	Min    int
+	Max    int
+	StdDev float64
 }
 
 // powerOfTwo returns the smallest power of two that is greater than or equal to `n`
@@ -71,10 +71,10 @@ func ComputeStatistics(m map[int]int64) Statistics {
 	}
 
 	return Statistics{
-		mean:   mean,
-		min:    min,
-		max:    max,
-		stdDev: math.Sqrt(sd / float64(len(m))),
+		Mean:   mean,
+		Min:    min,
+		Max:    max,
+		StdDev: math.Sqrt(sd / float64(len(m))),
 	}
 }
 
