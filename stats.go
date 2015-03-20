@@ -187,6 +187,23 @@ func trim(s map[string]bool, n int) map[string]bool {
 	return t
 }
 
+// trimAndSum removes entries from the frequency map that comprise less than
+// `threshold` % of the total, returning the sum of the **original** map
+func trimAndSum(m map[int]int64, threshold float64) int64 {
+	var s int64
+	var sum float64
+	for _, v := range m {
+		s += v
+	}
+	sum = float64(s)
+	for k, v := range m {
+		if float64(v)/sum <= threshold {
+			delete(m, k)
+		}
+	}
+	return s
+}
+
 // Merge adds the results from `other` into the method receiver.  This method
 // can be used to combine sampling results from multiple redis instances into a
 // single result set.

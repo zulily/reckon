@@ -6,12 +6,9 @@ import (
 	"text/template"
 )
 
-func sumValues(m map[int]int64) int64 {
-	var sum int64
-	for _, v := range m {
-		sum += v
-	}
-	return sum
+func summarize(m map[int]int64) int64 {
+	// trim off entries that constitute < 1% of the total
+	return trimAndSum(m, 0.01)
 }
 
 func fmtFloat(n float64) string {
@@ -28,14 +25,14 @@ const (
 # of keys: {{.KeyCount}}
 
 {{ if .StringKeys }}
---- Strings ({{sumValues .StringSizes}}) ---
+--- Strings ({{summarize .StringSizes}}) ---
 {{template "exampleKeys" .StringKeys}}
 Sizes ({{template "stats" .StringSizes}}):
 {{template "freq" .StringSizes}}
 {{template "freq" power .StringSizes}}{{end}}
 
 {{ if .SetKeys }}
---- Sets ({{sumValues .SetSizes}}) ---
+--- Sets ({{summarize .SetSizes}}) ---
 {{template "exampleKeys" .SetKeys}}
 Sizes ({{template "stats" .SetSizes}}):
 {{template "freq" .SetSizes}}
@@ -44,7 +41,7 @@ Element Sizes:{{template "freq" .SetElementSizes}}
 Element ^2 Sizes:{{template "freq" power .SetElementSizes}}{{end}}
 
 {{ if .SortedSetKeys }}
---- Sorted Sets ({{sumValues .SortedSetSizes}}) ---
+--- Sorted Sets ({{summarize .SortedSetSizes}}) ---
 {{template "exampleKeys" .SortedSetKeys}}
 Sizes ({{template "stats" .SortedSetSizes}}):
 {{template "freq" .SortedSetSizes}}
@@ -54,7 +51,7 @@ Element Sizes ({{template "stats" .SortedSetElementSizes}}):
 Element ^2 Sizes:{{template "freq" power .SortedSetElementSizes}}{{end}}
 
 {{ if .HashKeys }}
---- Hashes ({{sumValues .HashSizes}}) ---
+--- Hashes ({{summarize .HashSizes}}) ---
 {{template "exampleKeys" .HashKeys}}
 Sizes ({{template "stats" .HashSizes}}):
 {{template "freq" .HashSizes}}
@@ -67,7 +64,7 @@ Value Sizes ({{template "stats" .HashValueSizes}}):
 ^2 Value Sizes:{{template "freq" power .HashValueSizes}}{{end}}
 
 {{ if .ListKeys }}
---- Lists ({{sumValues .ListSizes}}) ---
+--- Lists ({{summarize .ListSizes}}) ---
 {{template "exampleKeys" .ListKeys}}
 Sizes ({{template "stats" .ListSizes}}):
 {{template "freq" .ListSizes}}
@@ -84,7 +81,7 @@ Element Sizes ({{template "stats" .ListElementSizes}}):
 {{end}}{{end}}
 
 {{define "freq"}}
-{{ $ss := sumValues . }}{{ range $s, $c := .}} {{$s}}: {{$c}} ({{percentage $c $ss }})
+{{ $ss := summarize . }}{{ range $s, $c := .}} {{$s}}: {{$c}} ({{percentage $c $ss }})
 {{end}}{{end}}
 `
 )
@@ -99,7 +96,7 @@ func RenderText(s *Results, out io.Writer) error {
 	s.ListKeys = trim(s.ListKeys, 5)
 
 	fm := template.FuncMap{
-		"sumValues":  sumValues,
+		"summarize":  summarize,
 		"percentage": percentage,
 		"power":      ComputePowerOfTwoFreq,
 		"stats":      ComputeStatistics,
