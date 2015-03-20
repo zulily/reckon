@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"core-gitlab.corp.zulily.com/core/sampler"
+	"github.com/zulily/sampler"
 )
 
 // keysThatStartWithA aggregates sampled keys that start with the letter 'a',

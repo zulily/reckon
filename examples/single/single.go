@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"core-gitlab.corp.zulily.com/core/sampler"
+	"github.com/zulily/sampler"
 )
 
 // aggregateByFirst letter aggregates redis stats according the first letter of the redis key
