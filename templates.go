@@ -89,11 +89,11 @@ Element Sizes ({{template "stats" .ListElementSizes}}):
 // RenderText renders a Results instance to the supplied io.Writer
 func RenderText(s *Results, out io.Writer) error {
 
-	s.StringKeys = trim(s.StringKeys, 5)
-	s.SetKeys = trim(s.SetKeys, 5)
-	s.SortedSetKeys = trim(s.SortedSetKeys, 5)
-	s.HashKeys = trim(s.HashKeys, 5)
-	s.ListKeys = trim(s.ListKeys, 5)
+	s.StringKeys = trim(s.StringKeys, 10)
+	s.SetKeys = trim(s.SetKeys, 10)
+	s.SortedSetKeys = trim(s.SortedSetKeys, 10)
+	s.HashKeys = trim(s.HashKeys, 10)
+	s.ListKeys = trim(s.ListKeys, 10)
 
 	fm := template.FuncMap{
 		"summarize":  summarize,
