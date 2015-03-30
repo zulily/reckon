@@ -3,7 +3,15 @@ package sampler
 import "math"
 
 const (
-	maxKeys = 10
+	// MaxExampleKeys sets an upper bound on the number of example keys that will
+	// be captured during sampling
+	MaxExampleKeys = 10
+	// MaxExampleElements sets an upper bound on the number of example elements that
+	// will be captured during sampling
+	MaxExampleElements = 10
+	// MaxExampleValues sets an upper bound on the number of example values that
+	// will be captured during sampling
+	MaxExampleValues = 10
 )
 
 // Statistics are basic descriptive statistics that summarize data in a frequency table
@@ -105,49 +113,65 @@ type Results struct {
 	KeyCount int64
 
 	// Strings
-	StringSizes map[int]int64
-	StringKeys  map[string]bool
+	StringSizes  map[int]int64
+	StringKeys   map[string]bool
+	StringValues map[string]bool
 
 	// Sets
 	SetSizes        map[int]int64
 	SetElementSizes map[int]int64
 	SetKeys         map[string]bool
+	SetElements     map[string]bool
 
 	// Sorted Sets
 	SortedSetSizes        map[int]int64
 	SortedSetElementSizes map[int]int64
 	SortedSetKeys         map[string]bool
+	SortedSetElements     map[string]bool
 
 	// Hashes
 	HashSizes        map[int]int64
 	HashElementSizes map[int]int64
 	HashValueSizes   map[int]int64
 	HashKeys         map[string]bool
+	HashElements     map[string]bool
+	HashValues       map[string]bool
 
 	// Lists
 	ListSizes        map[int]int64
 	ListElementSizes map[int]int64
 	ListKeys         map[string]bool
+	ListElements     map[string]bool
 }
 
 // NewResults constructs a new, zero-valued Results struct
 func NewResults() *Results {
 	return &Results{
-		StringSizes:           make(map[int]int64),
-		StringKeys:            make(map[string]bool),
-		SetSizes:              make(map[int]int64),
-		SetElementSizes:       make(map[int]int64),
-		SetKeys:               make(map[string]bool),
+		StringSizes:  make(map[int]int64),
+		StringKeys:   make(map[string]bool),
+		StringValues: make(map[string]bool),
+
+		SetSizes:        make(map[int]int64),
+		SetElementSizes: make(map[int]int64),
+		SetKeys:         make(map[string]bool),
+		SetElements:     make(map[string]bool),
+
 		SortedSetSizes:        make(map[int]int64),
 		SortedSetElementSizes: make(map[int]int64),
 		SortedSetKeys:         make(map[string]bool),
-		HashSizes:             make(map[int]int64),
-		HashElementSizes:      make(map[int]int64),
-		HashValueSizes:        make(map[int]int64),
-		HashKeys:              make(map[string]bool),
-		ListSizes:             make(map[int]int64),
-		ListElementSizes:      make(map[int]int64),
-		ListKeys:              make(map[string]bool),
+		SortedSetElements:     make(map[string]bool),
+
+		HashSizes:        make(map[int]int64),
+		HashElementSizes: make(map[int]int64),
+		HashValueSizes:   make(map[int]int64),
+		HashKeys:         make(map[string]bool),
+		HashElements:     make(map[string]bool),
+		HashValues:       make(map[string]bool),
+
+		ListSizes:        make(map[int]int64),
+		ListElementSizes: make(map[int]int64),
+		ListKeys:         make(map[string]bool),
+		ListElements:     make(map[string]bool),
 	}
 }
 
@@ -212,10 +236,16 @@ func (r *Results) Merge(other *Results) {
 
 	// union all sets
 	union(r.StringKeys, other.StringKeys)
+	union(r.StringValues, other.StringValues)
 	union(r.SetKeys, other.SetKeys)
+	union(r.SetElements, other.SetElements)
 	union(r.SortedSetKeys, other.SortedSetKeys)
+	union(r.SortedSetElements, other.SortedSetElements)
 	union(r.HashKeys, other.HashKeys)
+	union(r.HashElements, other.HashElements)
+	union(r.HashValues, other.HashValues)
 	union(r.ListKeys, other.ListKeys)
+	union(r.ListElements, other.ListElements)
 
 	// merge all frequency tables
 	merge(r.StringSizes, other.StringSizes)
@@ -234,14 +264,16 @@ func (r *Results) observeSet(key string, length int, member string) {
 	r.KeyCount++
 	inc(r.SetSizes, length)
 	inc(r.SetElementSizes, len(member))
-	add(r.SetKeys, key, maxKeys)
+	add(r.SetKeys, key, MaxExampleKeys)
+	add(r.SetElements, member, MaxExampleElements)
 }
 
 func (r *Results) observeSortedSet(key string, length int, member string) {
 	r.KeyCount++
 	inc(r.SortedSetSizes, length)
 	inc(r.SortedSetElementSizes, len(member))
-	add(r.SortedSetKeys, key, maxKeys)
+	add(r.SortedSetKeys, key, MaxExampleKeys)
+	add(r.SortedSetElements, member, MaxExampleElements)
 }
 
 func (r *Results) observeHash(key string, length int, field string, value string) {
@@ -249,18 +281,22 @@ func (r *Results) observeHash(key string, length int, field string, value string
 	inc(r.HashSizes, length)
 	inc(r.HashValueSizes, len(value))
 	inc(r.HashElementSizes, len(field))
-	add(r.HashKeys, key, maxKeys)
+	add(r.HashKeys, key, MaxExampleKeys)
+	add(r.HashElements, field, MaxExampleElements)
+	add(r.HashValues, value, MaxExampleValues)
 }
 
 func (r *Results) observeList(key string, length int, member string) {
 	r.KeyCount++
 	inc(r.ListSizes, length)
 	inc(r.ListElementSizes, len(member))
-	add(r.ListKeys, key, maxKeys)
+	add(r.ListKeys, key, MaxExampleKeys)
+	add(r.ListElements, member, MaxExampleElements)
 }
 
 func (r *Results) observeString(key, value string) {
 	r.KeyCount++
 	inc(r.StringSizes, len(value))
-	add(r.StringKeys, key, maxKeys)
+	add(r.StringKeys, key, MaxExampleKeys)
+	add(r.StringValues, value, MaxExampleValues)
 }
