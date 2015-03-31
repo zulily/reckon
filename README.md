@@ -73,7 +73,7 @@ To aggregate sampled keys of any redis datatype that are longer than 80 characte
 
 Get the code:
 
-   $ go get github.com/zulily/sampler
+    $ go get github.com/zulily/sampler
 
 To sample 100K keys from a redis instance running on `yourserver:6379` and
 print the results to `stdout`:
