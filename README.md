@@ -2,14 +2,14 @@
 
 > A golang package for sampling and reporting on random keys on a set of redis instances
 
-Highly influenced by [redis-sampler](https://github.com/antirez/redis-sampler)
-by [antirez](https://github.com/antirez), the creator of redis.
+Inspired/influenced by [redis-sampler](https://github.com/antirez/redis-sampler)
+from [antirez](https://github.com/antirez), the author of redis.
 
 ## Background
 
 We love redis here at [zulily](https://github.com/zulily/). We store millions
-of keys across many redis instances, including our own internal distributed
-cache.
+of keys across many redis instances, and we've built our own internal distributed
+cache on top of it.
 
 One problem with running a large, distributed cache using redis is the opaque
 nature of the keyspaces; it's hard to tell what the composition of your redis
@@ -18,14 +18,7 @@ same redis instance(s), or you're sharding your dataset over a large number of
 redis instances.
 
 While there is an [existing solution](https://github.com/antirez/redis-sampler) for
-sampling a redis keyspace, we wanted to make a few improvements:
-
-### Written in [go](https://golang.org/):
-
-We use a lot of Go. Without delving into all the reasons we love Go, suffice it
-to say that Go's ability to compile to a fully-contained static binary means
-that it's easy to run `sampler` on any host in our fleet.  Just `scp` a binary,
-and run it.
+sampling a redis keyspace, the `sampler` package has a few advantages:
 
 ### Programmatic access to sampling results:
 
@@ -35,12 +28,20 @@ redis instances, and merging the results to get an overall picture of the
 keyspaces.  We've included some sample code to do just that, in the
 [examples](https://github.com/zulily/sampler/tree/master/examples/sampler-cluster).
 
-### Arbitrary aggregation based on key and redis type:
+### Arbitrary aggregation based on key and redis data type:
 
-Sometimes we only want to examine redis hashes, other times, we care more about
-keys that have a certain naming convention. `sampler` allows you to define
-arbitrary aggregation "buckets", based on the name and redis data type of each
-sampled key. Details about the aggregations below:
+`sampler` affords you the ability to sample, examine, and aggregate statistics
+about particular redis data types (e.g. hashes, sets, ...) and/or keys with
+particular names/patterns. You can then define arbitrary aggregation "buckets",
+based on the aforementioned properties of each sampled key. Details about the
+aggregations [below](https://github.com/zulily/sampler#aggregation)
+
+### Written in [Go](https://golang.org/):
+
+We use a lot of Go. Without delving into all the reasons we love Go, suffice it
+to say that Go's ability to compile to a fully-contained static binary means
+that it's easy to run `sampler` on any host in our fleet.  Just `scp` a binary,
+and run it.
 
 ## Aggregation
 
@@ -49,7 +50,7 @@ redis key and/or datatype:
 
 Any type that implements the `Aggregator` interface can instruct `sampler`
 about how to group the redis keys that it samples.  This is best illustrated
-with an example:
+with some simple examples:
 
 To aggregate only redis sets whose keys start with the letter `a`:
 
@@ -60,7 +61,7 @@ To aggregate only redis sets whose keys start with the letter `a`:
       return []string{}
     }
 
-To aggregate sampled keys of any redis datatype that are longer than 80 characters:
+To aggregate sampled keys of any redis data type that are longer than 80 characters:
 
     func longKeys(key string, valueType sampler.ValueType) []string {
       if len(key) > 80 {
@@ -88,6 +89,6 @@ proxy, since twemproxy implements a subset of the redis protocol that does not
 include these commands.
 
 However, instead of sampling through a proxy, you can easily run `sampler`
-against multiple redis instances, and merge the results.  We include an example
+against multiple redis instances, and merge the results.  We include code
 that does just that in the
 [examples](https://github.com/zulily/sampler/tree/master/examples/sampler-cluster).
