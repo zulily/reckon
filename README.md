@@ -76,8 +76,46 @@ Get the code:
 
     $ go get github.com/zulily/sampler
 
-To sample 10K keys from a redis instance running on `yourserver:6379` and
-print the results to `stdout`:
+Use the package in a binary:
+
+    package main
+
+    import (
+      "log"
+      "os"
+
+      "github.com/zulily/sampler"
+    )
+
+    func main() {
+
+      opts := sampler.Options{
+        Host:    "localhost",
+        Port:    6379,
+        NumKeys: 10000,
+      }
+
+      stats, err := sampler.Run(opts, sampler.AggregatorFunc(sampler.AnyKey))
+      if err != nil {
+        log.Fatalf("ERROR: %v\n", err)
+      }
+
+      for k, v := range stats {
+        log.Printf("stats for: %s\n", k)
+        if err := sampler.RenderText(v, os.Stdout); err != nil {
+          log.Fatalf("ERROR: %v\n", err)
+        }
+      }
+    }
+
+
+## Examples
+
+Some example binaries are included that demonstrate various usages of the
+`sampler` package, the simplest of which samples from a single redis instance.
+
+To sample 10K keys from a redis instance running on `yourserver:6379` and print
+the results to `stdout`:
 
     $ sampler-single -host=yourserver -port=6379 -num-keys=10000
 
