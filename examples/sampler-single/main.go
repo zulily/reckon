@@ -29,7 +29,7 @@ func main() {
 	opts := sampler.Options{}
 	flag.StringVar(&opts.Host, "host", "localhost", "the hostname of the redis server")
 	flag.IntVar(&opts.Port, "port", 6379, "the port of the redis server")
-	flag.IntVar(&opts.NumKeys, "num-keys", 50, "number of keys to sample (should be <= the number of keys in the redis instance")
+	flag.IntVar(&opts.MinSamples, "min-samples", 50, "number of random samples to take (should be <= the number of keys in the redis instance")
 	flag.Parse()
 
 	stats, err := sampler.Run(opts, sampler.AggregatorFunc(sampler.AnyKey))

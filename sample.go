@@ -13,11 +13,23 @@ import (
 
 // Options is a configuration struct that instructs the sampler pkg to sample
 // the redis instance listening on a particular host/port with a specified
-// number of random keys.
+// number/percentage of random keys.
 type Options struct {
-	Host    string
-	Port    int
-	NumKeys int
+	Host string
+	Port int
+
+	// MinSamples indicates the minimum number of random keys to sample from the redis
+	// instance.  Note that this does not mean **unique** keys, just an absolute
+	// number of random keys.  Therefore, this number should be small relative to
+	// the number of keys in the redis instance.
+	MinSamples int
+
+	// SampleRate indicates the percentage of the keyspace to sample.
+	// Accordingly, values should be between 0.0 and 1.0.  If a non-zero value is
+	// given for both `SampleRate` and `MinSamples`, the actual number of keys
+	// sampled will be the greater of the two values, once the key count has been
+	// calculated using the `SampleRate`.
+	SampleRate float32
 }
 
 // A ValueType represents the various data types that redis can store. The
@@ -237,6 +249,14 @@ func sampleHash(key string, conn redis.Conn, aggregator Aggregator, stats map[st
 	return nil
 }
 
+func max(a, b int) int {
+	if a > b {
+		return a
+	} else {
+		return b
+	}
+}
+
 // Run performs the configured sampling operation against the redis instance,
 // aggregating statistics using the provided Aggregator.  If any errors occurr,
 // the sampling is short-circuited, and the error is returned.  In such a case,
@@ -246,24 +266,38 @@ func Run(opts Options, aggregator Aggregator) (map[string]*Results, error) {
 	stats := make(map[string]*Results)
 	var err error
 
+	if opts.SampleRate < 0.0 || opts.SampleRate > 1.0 {
+		return stats, errors.New("SampleRate must be between 0.0 and 1.0")
+	}
+
+	if opts.MinSamples <= 0 && opts.SampleRate == 0.0 {
+		return stats, errors.New("MinSamples cannot be 0")
+	}
+
 	conn, err := redis.Dial("tcp", net.JoinHostPort(opts.Host, strconv.Itoa(opts.Port)))
 	if err != nil {
 		return stats, fmt.Errorf("Error connecting to the redis instance at: %s:%d : %s", opts.Host, opts.Port, err.Error())
 	}
 
+	numSamples := opts.MinSamples
+
 	if kc, err := keyCount(conn); err != nil {
 		return stats, err
 	} else {
 		fmt.Printf("redis at %s:%d has %d keys\n", opts.Host, opts.Port, kc)
+		if opts.SampleRate > 0.0 {
+			v := int(float32(kc) * opts.SampleRate)
+			numSamples = max(max(v, numSamples), 1)
+		}
 	}
 
-	interval := opts.NumKeys / 100
+	interval := numSamples / 100
 	if interval == 0 {
 		interval = 100
 	}
 	lastInterval := 0
 
-	for i := 0; i < opts.NumKeys; i++ {
+	for i := 0; i < numSamples; i++ {
 		key, vt, err := randomKey(conn)
 		if err != nil {
 			return stats, err

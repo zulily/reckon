@@ -29,9 +29,9 @@ func main() {
 
 	// Sample 100 keys from each of three redis instances, all running on different ports on localhost
 	redises := []sampler.Options{
-		sampler.Options{Host: "localhost", Port: 6379, NumKeys: 100},
-		sampler.Options{Host: "localhost", Port: 6380, NumKeys: 100},
-		sampler.Options{Host: "localhost", Port: 6381, NumKeys: 100},
+		sampler.Options{Host: "localhost", Port: 6379, MinSamples: 100},
+		sampler.Options{Host: "localhost", Port: 6380, MinSamples: 100},
+		sampler.Options{Host: "localhost", Port: 6381, MinSamples: 100},
 	}
 
 	aggregator := sampler.AggregatorFunc(sampler.AnyKey)
@@ -45,7 +45,7 @@ func main() {
 	for _, redis := range redises {
 		go func(opts sampler.Options) {
 			defer wg.Done()
-			log.Printf("Sampling %d keys from redis at: %s:%d...\n", opts.NumKeys, opts.Host, opts.Port)
+			log.Printf("Sampling %d keys from redis at: %s:%d...\n", opts.MinSamples, opts.Host, opts.Port)
 			s, err := sampler.Run(opts, aggregator)
 			results <- samplerResult{s: s, err: err}
 		}(redis)

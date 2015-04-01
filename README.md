@@ -90,9 +90,9 @@ Use the package in a binary:
     func main() {
 
       opts := sampler.Options{
-        Host:    "localhost",
-        Port:    6379,
-        NumKeys: 10000,
+        Host:       "localhost",
+        Port:       6379,
+        MinSamples: 10000,
       }
 
       stats, err := sampler.Run(opts, sampler.AggregatorFunc(sampler.AnyKey))
