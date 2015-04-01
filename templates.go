@@ -22,7 +22,7 @@ func percentage(n, total int64) string {
 const (
 	statsTempl = `
 {{define "base"}}
-# of keys: {{.KeyCount}}
+# of keys sampled: {{.KeyCount}}
 
 {{ if .StringKeys }}
 --- Strings ({{summarize .StringSizes}}) ---
