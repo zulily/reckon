@@ -1,9 +1,12 @@
 package sampler
 
 import (
+	"errors"
 	"fmt"
 	"net"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/garyburd/redigo/redis"
 )
@@ -35,7 +38,21 @@ var (
 	TypeList ValueType = "list"
 	// TypeUnknown means that the redis value type is undefined, and indicates an error
 	TypeUnknown ValueType = "unknown"
+
+	// ErrNoKeys is the error returned when a specified redis instance contains
+	// no keys, or the key count could not be determined
+	ErrNoKeys error = errors.New("No keys are present in the configured redis instance")
+
+	// keysExpr captures the key count from the matching line of output from
+	// redis' "INFO" command
+	keysExpr = regexp.MustCompile("^db\\d+:keys=(\\d+),")
 )
+
+// AnyKey is an AggregatorFunc that puts any sampled key (regardless of key
+// name or redis data type) into a generic "any" bucket.
+func AnyKey(key string, valueType ValueType) []string {
+	return []string{"any"}
+}
 
 // An Aggregator returns 0 or more arbitrary strings, to be used during a
 // sampling operation as aggregation groups or "buckets". For example, an
@@ -87,6 +104,25 @@ func randomKey(conn redis.Conn) (key string, vt ValueType, err error) {
 	}
 
 	return key, ValueType(typeStr), nil
+}
+
+// keyCount obtains a the number of keys in the redis instance.
+func keyCount(conn redis.Conn) (count int64, err error) {
+	resp, err := redis.String(conn.Do("INFO"))
+	if err != nil {
+		return count, err
+	}
+
+	for _, str := range strings.Split(resp, "\n") {
+		if matches := keysExpr.FindStringSubmatch(str); len(matches) >= 2 {
+			if count, err = strconv.ParseInt(matches[1], 10, 64); err == nil && count != 0 {
+				return count, nil
+			}
+			return count, ErrNoKeys
+		}
+	}
+
+	return 0, ErrNoKeys
 }
 
 func sampleString(key string, conn redis.Conn, aggregator Aggregator, stats map[string]*Results) error {
@@ -212,7 +248,13 @@ func Run(opts Options, aggregator Aggregator) (map[string]*Results, error) {
 
 	conn, err := redis.Dial("tcp", net.JoinHostPort(opts.Host, strconv.Itoa(opts.Port)))
 	if err != nil {
+		return stats, fmt.Errorf("Error connecting to the redis instance at: %s:%d : %s", opts.Host, opts.Port, err.Error())
+	}
+
+	if kc, err := keyCount(conn); err != nil {
 		return stats, err
+	} else {
+		fmt.Printf("redis at %s:%d has %d keys\n", opts.Host, opts.Port, kc)
 	}
 
 	interval := opts.NumKeys / 100
