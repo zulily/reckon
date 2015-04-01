@@ -17,8 +17,8 @@ dataset is, especially when you've got multiple codebases or teams using the
 same redis instance(s), or you're sharding your dataset over a large number of
 redis instances.
 
-While there is an [existing solution](https://github.com/zulily/) for sampling
-a redis keyspace, we wanted to make a few improvements:
+While there is an [existing solution](https://github.com/antirez/redis-sampler) for
+sampling a redis keyspace, we wanted to make a few improvements:
 
 ### Written in [go](https://golang.org/):
 
