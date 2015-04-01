@@ -58,7 +58,6 @@ func main() {
 
 			if r.err != nil {
 				log.Fatalf("ERROR: %v\n", r.err.Error())
-				return
 			}
 			log.Printf("Got results back from a redis!")
 
@@ -82,7 +81,6 @@ func main() {
 		err := sampler.RenderText(v, os.Stdout)
 		if err != nil {
 			log.Fatalf("ERROR: %v\n", err)
-			return
 		}
 	}
 }

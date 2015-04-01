@@ -36,7 +36,6 @@ func main() {
 
 	if err != nil {
 		log.Fatalf("ERROR: %v\n", err)
-		return
 	}
 
 	for k, v := range stats {
@@ -44,7 +43,6 @@ func main() {
 		err := sampler.RenderText(v, os.Stdout)
 		if err != nil {
 			log.Fatalf("ERROR: %v\n", err)
-			return
 		}
 	}
 }
