@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"strings"
 	"sync"
@@ -34,7 +34,7 @@ func main() {
 		sampler.Options{Host: "localhost", Port: 6381, NumKeys: 100},
 	}
 
-	aggregator := sampler.AggregatorFunc(keysThatStartWithA)
+	aggregator := sampler.AggregatorFunc(sampler.AnyKey)
 
 	var wg sync.WaitGroup
 	results := make(chan samplerResult)
@@ -45,7 +45,7 @@ func main() {
 	for _, redis := range redises {
 		go func(opts sampler.Options) {
 			defer wg.Done()
-			fmt.Printf("Sampling %d keys from redis at: %s:%d...\n", opts.NumKeys, opts.Host, opts.Port)
+			log.Printf("Sampling %d keys from redis at: %s:%d...\n", opts.NumKeys, opts.Host, opts.Port)
 			s, err := sampler.Run(opts, aggregator)
 			results <- samplerResult{s: s, err: err}
 		}(redis)
@@ -57,10 +57,10 @@ func main() {
 		for r := range results {
 
 			if r.err != nil {
-				fmt.Printf("ERROR: %v\n", r.err.Error())
+				log.Fatalf("ERROR: %v\n", r.err.Error())
 				return
 			}
-			fmt.Println("Got results back from a redis!")
+			log.Printf("Got results back from a redis!")
 
 			for k, v := range r.s {
 				if existing, ok := totals[k]; ok {
@@ -78,10 +78,10 @@ func main() {
 	close(results)
 
 	for k, v := range totals {
-		fmt.Printf("Totals for: %s:\n", k)
+		log.Printf("Totals for: %s:\n", k)
 		err := sampler.RenderText(v, os.Stdout)
 		if err != nil {
-			fmt.Printf("ERROR: %v\n", err)
+			log.Fatalf("ERROR: %v\n", err)
 			return
 		}
 	}

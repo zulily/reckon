@@ -33,7 +33,7 @@ Results are returned in data structures, not just printed to stdout. This
 allows for some interesting use cases, like sampling data across a cluster of
 redis instances, and merging the results to get an overall picture of the
 keyspaces.  We've included some sample code to do just that, in the
-[examples](https://github.com/zulily/sampler/tree/master/examples/cluster).
+[examples](https://github.com/zulily/sampler/tree/master/examples/sampler-cluster).
 
 ### Arbitrary aggregation based on key and redis type:
 
@@ -75,10 +75,10 @@ Get the code:
 
     $ go get github.com/zulily/sampler
 
-To sample 100K keys from a redis instance running on `yourserver:6379` and
+To sample 10K keys from a redis instance running on `yourserver:6379` and
 print the results to `stdout`:
 
-    $ ./single -host=yourserver -port=6379 -num-keys=100000
+    $ sampler-single -host=yourserver -port=6379 -num-keys=10000
 
 ## Limitations
 
@@ -90,4 +90,4 @@ include these commands.
 However, instead of sampling through a proxy, you can easily run `sampler`
 against multiple redis instances, and merge the results.  We include an example
 that does just that in the
-[examples](https://github.com/zulily/sampler/tree/master/examples/cluster).
+[examples](https://github.com/zulily/sampler/tree/master/examples/sampler-cluster).

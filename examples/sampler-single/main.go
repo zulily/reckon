@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -32,18 +32,18 @@ func main() {
 	flag.IntVar(&opts.NumKeys, "num-keys", 50, "number of keys to sample (should be <= the number of keys in the redis instance")
 	flag.Parse()
 
-	stats, err := sampler.Run(opts, sampler.AggregatorFunc(setsThatStartWithA))
+	stats, err := sampler.Run(opts, sampler.AggregatorFunc(sampler.AnyKey))
 
 	if err != nil {
-		fmt.Printf("ERROR: %v\n", err)
+		log.Fatalf("ERROR: %v\n", err)
 		return
 	}
 
 	for k, v := range stats {
-		fmt.Printf("stats for: %s\n", k)
+		log.Printf("stats for: %s\n", k)
 		err := sampler.RenderText(v, os.Stdout)
 		if err != nil {
-			fmt.Printf("ERROR: %v\n", err)
+			log.Fatalf("ERROR: %v\n", err)
 			return
 		}
 	}
