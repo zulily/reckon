@@ -45,7 +45,7 @@ const (
 {{template "exampleValues" .StringValues}}
 Sizes ({{template "stats" .StringSizes}}):
 {{template "freq" .StringSizes}}
-{{template "freq" power .StringSizes}}{{end}}
+^2 Sizes:{{template "freq" power .StringSizes}}{{end}}
 
 {{ if .SetKeys }}
 --- Sets ({{summarize .SetSizes}}) ---
