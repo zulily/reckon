@@ -308,7 +308,7 @@ func Run(opts Options, aggregator Aggregator) (map[string]*Results, error) {
 
 	interval := numSamples / 100
 	if interval == 0 {
-		interval = 100
+		interval = 1
 	}
 	lastInterval := 0
 
