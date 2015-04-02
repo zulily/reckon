@@ -273,35 +273,37 @@ func max(a, b int) int {
 }
 
 // Run performs the configured sampling operation against the redis instance,
-// aggregating statistics using the provided Aggregator.  If any errors occurr,
-// the sampling is short-circuited, and the error is returned.  In such a case,
-// the results should be considered invalid.
-func Run(opts Options, aggregator Aggregator) (map[string]*Results, error) {
+// returning aggregated statistics using the provided Aggregator, as well as
+// the actual key count for the redis instance.  If any errors occurr, the
+// sampling is short-circuited, and the error is returned.  In such a case, the
+// results should be considered invalid.
+func Run(opts Options, aggregator Aggregator) (map[string]*Results, int64, error) {
 
 	stats := make(map[string]*Results)
 	var err error
+	var keys int64
 
 	if opts.SampleRate < 0.0 || opts.SampleRate > 1.0 {
-		return stats, errors.New("SampleRate must be between 0.0 and 1.0")
+		return stats, keys, errors.New("SampleRate must be between 0.0 and 1.0")
 	}
 
 	if opts.MinSamples <= 0 && opts.SampleRate == 0.0 {
-		return stats, errors.New("MinSamples cannot be 0")
+		return stats, keys, errors.New("MinSamples cannot be 0")
 	}
 
 	conn, err := redis.Dial("tcp", net.JoinHostPort(opts.Host, strconv.Itoa(opts.Port)))
 	if err != nil {
-		return stats, fmt.Errorf("Error connecting to the redis instance at: %s:%d : %s", opts.Host, opts.Port, err.Error())
+		return stats, keys, fmt.Errorf("Error connecting to the redis instance at: %s:%d : %s", opts.Host, opts.Port, err.Error())
 	}
 
 	numSamples := opts.MinSamples
 
-	if kc, err := keyCount(conn); err != nil {
-		return stats, err
+	if keys, err = keyCount(conn); err != nil {
+		return stats, keys, err
 	} else {
-		fmt.Printf("redis at %s:%d has %d keys\n", opts.Host, opts.Port, kc)
+		fmt.Printf("redis at %s:%d has %d keys\n", opts.Host, opts.Port, keys)
 		if opts.SampleRate > 0.0 {
-			v := int(float32(kc) * opts.SampleRate)
+			v := int(float32(keys) * opts.SampleRate)
 			numSamples = max(max(v, numSamples), 1)
 		}
 	}
@@ -315,7 +317,7 @@ func Run(opts Options, aggregator Aggregator) (map[string]*Results, error) {
 	for i := 0; i < numSamples; i++ {
 		key, vt, err := randomKey(conn)
 		if err != nil {
-			return stats, err
+			return stats, keys, err
 		}
 
 		if i/interval != lastInterval {
@@ -325,33 +327,28 @@ func Run(opts Options, aggregator Aggregator) (map[string]*Results, error) {
 
 		switch ValueType(vt) {
 		case TypeString:
-			err = sampleString(key, conn, aggregator, stats)
-			if err != nil {
-				return stats, err
+			if err = sampleString(key, conn, aggregator, stats); err != nil {
+				return stats, keys, err
 			}
 		case TypeList:
-			err = sampleList(key, conn, aggregator, stats)
-			if err != nil {
-				return stats, err
+			if err = sampleList(key, conn, aggregator, stats); err != nil {
+				return stats, keys, err
 			}
 		case TypeSet:
-			err = sampleSet(key, conn, aggregator, stats)
-			if err != nil {
-				return stats, err
+			if err = sampleSet(key, conn, aggregator, stats); err != nil {
+				return stats, keys, err
 			}
 		case TypeSortedSet:
-			err = sampleSortedSet(key, conn, aggregator, stats)
-			if err != nil {
-				return stats, err
+			if err = sampleSortedSet(key, conn, aggregator, stats); err != nil {
+				return stats, keys, err
 			}
 		case TypeHash:
-			err = sampleHash(key, conn, aggregator, stats)
-			if err != nil {
-				return stats, err
+			if err = sampleHash(key, conn, aggregator, stats); err != nil {
+				return stats, keys, err
 			}
 		default:
-			return stats, fmt.Errorf("unknown type for redis key: %s", key)
+			return stats, keys, fmt.Errorf("unknown type for redis key: %s", key)
 		}
 	}
-	return stats, nil
+	return stats, keys, nil
 }
