@@ -38,6 +38,7 @@ const (
 	statsTempl = `
 {{define "base"}}
 # of keys sampled: {{.KeyCount}}
+{{ if .LRUSeconds}}LRU (seconds): {{template "stats" .LRUSeconds}}{{end}}
 
 {{ if .StringKeys }}
 --- Strings ({{summarize .StringSizes}}) ---
