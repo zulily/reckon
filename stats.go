@@ -125,6 +125,8 @@ func add(set map[string]bool, elem string, maxsize int) {
 type Results struct {
 	KeyCount int64
 
+	LRUSeconds map[int]int64
+
 	// Strings
 	StringSizes  map[int]int64
 	StringKeys   map[string]bool
@@ -160,6 +162,8 @@ type Results struct {
 // NewResults constructs a new, zero-valued Results struct
 func NewResults() *Results {
 	return &Results{
+		LRUSeconds: make(map[int]int64),
+
 		StringSizes:  make(map[int]int64),
 		StringKeys:   make(map[string]bool),
 		StringValues: make(map[string]bool),
@@ -255,6 +259,7 @@ func (r *Results) Merge(other *Results) {
 	union(r.ListElements, other.ListElements)
 
 	// merge all frequency tables
+	merge(r.LRUSeconds, other.LRUSeconds)
 	merge(r.StringSizes, other.StringSizes)
 	merge(r.SetSizes, other.SetSizes)
 	merge(r.SetElementSizes, other.SetElementSizes)
@@ -265,6 +270,12 @@ func (r *Results) Merge(other *Results) {
 	merge(r.HashValueSizes, other.HashValueSizes)
 	merge(r.ListSizes, other.ListSizes)
 	merge(r.ListElementSizes, other.ListElementSizes)
+}
+
+func (r *Results) observeLRU(lruSeconds int) {
+	if lruSeconds != LRUUnknown {
+		r.LRUSeconds[lruSeconds] += 1
+	}
 }
 
 func (r *Results) observeSet(key string, length int, member string) {
