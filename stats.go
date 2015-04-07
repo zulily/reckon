@@ -184,20 +184,14 @@ func NewResults() *Results {
 // that are present in `a`, their values will be summed
 func merge(a map[int]int64, b map[int]int64) {
 	for k, v := range b {
-		if existing, ok := a[k]; ok {
-			a[k] = existing + v
-		} else {
-			a[k] = v
-		}
+		a[k] += v
 	}
 }
 
 // union performs a set union of `a` and `b`, storing the results in `a`
 func union(a map[string]bool, b map[string]bool) {
 	for k := range b {
-		if !a[k] {
-			a[k] = true
-		}
+		a[k] = true
 	}
 }
 
