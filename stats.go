@@ -101,16 +101,6 @@ func ComputeStatistics(m map[int]int64) Statistics {
 	}
 }
 
-// inc increments the map value for `e` by 1 in the supplied map `m`, adding an
-// entry if one does not already exist
-func inc(m map[int]int64, e int) {
-	if existing, ok := m[e]; ok {
-		m[e] = existing + 1
-	} else {
-		m[e] = 1
-	}
-}
-
 // add adds `elem` to the "set" (a map[<type>]bool is an idiomatic golang "set") if the
 // current size of the set is less than `maxsize`
 func add(set map[string]bool, elem string, maxsize int) {
@@ -277,25 +267,25 @@ func (r *Results) Merge(other *Results) {
 
 func (r *Results) observeSet(key string, length int, member string) {
 	r.KeyCount++
-	inc(r.SetSizes, length)
-	inc(r.SetElementSizes, len(member))
+	r.SetSizes[length] += 1
+	r.SetElementSizes[len(member)] += 1
 	add(r.SetKeys, key, MaxExampleKeys)
 	add(r.SetElements, member, MaxExampleElements)
 }
 
 func (r *Results) observeSortedSet(key string, length int, member string) {
 	r.KeyCount++
-	inc(r.SortedSetSizes, length)
-	inc(r.SortedSetElementSizes, len(member))
+	r.SortedSetSizes[length] += 1
+	r.SortedSetElementSizes[len(member)] += 1
 	add(r.SortedSetKeys, key, MaxExampleKeys)
 	add(r.SortedSetElements, member, MaxExampleElements)
 }
 
 func (r *Results) observeHash(key string, length int, field string, value string) {
 	r.KeyCount++
-	inc(r.HashSizes, length)
-	inc(r.HashValueSizes, len(value))
-	inc(r.HashElementSizes, len(field))
+	r.HashSizes[length] += 1
+	r.HashValueSizes[len(value)] += 1
+	r.HashElementSizes[len(field)] += 1
 	add(r.HashKeys, key, MaxExampleKeys)
 	add(r.HashElements, field, MaxExampleElements)
 	add(r.HashValues, value, MaxExampleValues)
@@ -303,15 +293,15 @@ func (r *Results) observeHash(key string, length int, field string, value string
 
 func (r *Results) observeList(key string, length int, member string) {
 	r.KeyCount++
-	inc(r.ListSizes, length)
-	inc(r.ListElementSizes, len(member))
+	r.ListSizes[length] += 1
+	r.ListElementSizes[len(member)] += 1
 	add(r.ListKeys, key, MaxExampleKeys)
 	add(r.ListElements, member, MaxExampleElements)
 }
 
 func (r *Results) observeString(key, value string) {
 	r.KeyCount++
-	inc(r.StringSizes, len(value))
+	r.StringSizes[len(value)] += 1
 	add(r.StringKeys, key, MaxExampleKeys)
 	add(r.StringValues, value, MaxExampleValues)
 }
