@@ -97,7 +97,7 @@ func ComputeStatistics(m map[int]int64) Statistics {
 		Mean:   mean,
 		Min:    min,
 		Max:    max,
-		StdDev: math.Sqrt(sd / float64(count)),
+		StdDev: math.Sqrt(sd / float64(count-1)),
 	}
 }
 
