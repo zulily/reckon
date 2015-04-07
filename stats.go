@@ -37,6 +37,14 @@ type Statistics struct {
 	StdDev float64
 }
 
+// NewStatistics creates a new zero-valued Statistics instance
+func NewStatistics() *Statistics {
+	return &Statistics{
+		Mean:   math.NaN(),
+		StdDev: math.NaN(),
+	}
+}
+
 // powerOfTwo returns the smallest power of two that is greater than or equal to `n`
 func powerOfTwo(n int) int {
 	p := 1
@@ -66,9 +74,9 @@ func ComputePowerOfTwoFreq(m map[int]int64) map[int]int64 {
 
 // ComputeStatistics computes basic descriptive statistics about a frequency map
 func ComputeStatistics(m map[int]int64) Statistics {
-	stats := Statistics{}
+	stats := NewStatistics()
 	if len(m) == 0 {
-		return stats
+		return *stats
 	}
 
 	min := math.MaxInt32
