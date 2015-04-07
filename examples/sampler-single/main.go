@@ -45,14 +45,16 @@ func main() {
 	flag.StringVar(&opts.Host, "host", "localhost", "the hostname of the redis server")
 	flag.IntVar(&opts.Port, "port", 6379, "the port of the redis server")
 	flag.IntVar(&opts.MinSamples, "min-samples", 50, "number of random samples to take (should be <= the number of keys in the redis instance")
+	flag.BoolVar(&opts.LRUStats, "lru-stats", false, "whether or not to collect LRU stats from sampled keys (seconds since last read/write)")
 	flag.Parse()
 
-	stats, err := sampler.Run(opts, sampler.AggregatorFunc(sampler.AnyKey))
+	stats, keyCount, err := sampler.Run(opts, sampler.AggregatorFunc(sampler.AnyKey))
 
 	if err != nil {
 		log.Fatalf("ERROR: %v\n", err)
 	}
 
+	log.Printf("total key count: %d\n", keyCount)
 	for k, v := range stats {
 		log.Printf("stats for: %s\n", k)
 		err := sampler.RenderText(v, os.Stdout)

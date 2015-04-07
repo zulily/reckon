@@ -36,8 +36,9 @@ func keysThatStartWithA(key string, valueType sampler.ValueType) []string {
 
 // samplerResult allow us to return results OR an error on the same chan
 type samplerResult struct {
-	s   map[string]*sampler.Results
-	err error
+	s        map[string]*sampler.Results
+	keyCount int64
+	err      error
 }
 
 func main() {
@@ -61,21 +62,23 @@ func main() {
 		go func(opts sampler.Options) {
 			defer wg.Done()
 			log.Printf("Sampling %d keys from redis at: %s:%d...\n", opts.MinSamples, opts.Host, opts.Port)
-			s, err := sampler.Run(opts, aggregator)
-			results <- samplerResult{s: s, err: err}
+			s, keyCount, err := sampler.Run(opts, aggregator)
+			results <- samplerResult{s: s, keyCount: keyCount, err: err}
 		}(redis)
 	}
 
 	// Collect and merge all the results
 	totals := make(map[string]*sampler.Results)
+	totalKeyCount := int64(0)
+
 	go func() {
 		for r := range results {
-
 			if r.err != nil {
 				log.Fatalf("ERROR: %v\n", r.err.Error())
 			}
 			log.Printf("Got results back from a redis!")
 
+			totalKeyCount += r.keyCount
 			for k, v := range r.s {
 				if existing, ok := totals[k]; ok {
 					existing.Merge(v)
@@ -91,6 +94,7 @@ func main() {
 	wg.Wait()
 	close(results)
 
+	log.Printf("total key count: %d\n", totalKeyCount)
 	for k, v := range totals {
 		log.Printf("Totals for: %s:\n", k)
 		err := sampler.RenderText(v, os.Stdout)
