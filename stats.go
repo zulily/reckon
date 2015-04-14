@@ -123,6 +123,7 @@ func add(set map[string]bool, elem string, maxsize int) {
 // lengths/sizes occurred in the sampled data. Example keys are stored in
 // golang "sets", which are maps with bool values.
 type Results struct {
+	Name     string
 	KeyCount int64
 
 	// Strings

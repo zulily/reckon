@@ -17,6 +17,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -56,9 +57,15 @@ func main() {
 	log.Printf("total key count: %d\n", keyCount)
 	for k, v := range stats {
 		log.Printf("stats for: %s\n", k)
-		err := sampler.RenderText(v, os.Stdout)
-		if err != nil {
-			log.Fatalf("ERROR: %v\n", err)
+
+		v.Name = k
+		if f, err := os.Create(fmt.Sprintf("output/output-%s.html", k)); err != nil {
+			panic(err)
+		} else {
+			defer f.Close()
+			if err := sampler.RenderHTML(v, f); err != nil {
+				panic(err)
+			}
 		}
 	}
 }
