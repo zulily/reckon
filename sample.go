@@ -45,10 +45,6 @@ type Options struct {
 	// sampled will be the greater of the two values, once the key count has been
 	// calculated using the `SampleRate`.
 	SampleRate float32
-
-	// LRUStats indicates whether or not to report stats on the amount of time
-	// elapsed since a read/write has occurred on each sampled key
-	LRUStats bool
 }
 
 // A ValueType represents the various data types that redis can store. The
@@ -69,8 +65,6 @@ var (
 	TypeList ValueType = "list"
 	// TypeUnknown means that the redis value type is undefined, and indicates an error
 	TypeUnknown ValueType = "unknown"
-
-	LRUUnknown int = -1
 
 	// ErrNoKeys is the error returned when a specified redis instance contains
 	// no keys, or the key count could not be determined
@@ -124,40 +118,19 @@ func ensureEntry(m map[string]*Results, group string, init func() *Results) *Res
 	return stats
 }
 
-// keyInfo contains a key and optionally, information about it's redis data
-// type and time since last read/write (in seconds)
-type keyInfo struct {
-	key string
-	vt  ValueType
-	lru int
-}
-
-// randomKey obtains a random redis key, its ValueType, and (optionally) the
-// number of seconds since a read/write last occurred against the key, all from
-// the supplied redis connection
-func randomKey(conn redis.Conn, lru bool) (ki *keyInfo, err error) {
-	ki = &keyInfo{vt: TypeUnknown, lru: LRUUnknown}
-
-	ki.key, err = redis.String(conn.Do("RANDOMKEY"))
-
+// randomKey obtains a random redis key and its ValueType from the supplied redis connection
+func randomKey(conn redis.Conn) (key string, vt ValueType, err error) {
+	key, err = redis.String(conn.Do("RANDOMKEY"))
 	if err != nil {
-		return ki, err
+		return key, TypeUnknown, err
 	}
 
-	if lru {
-		if ki.lru, err = redis.Int(conn.Do("OBJECT", "IDLETIME", ki.key)); err != nil {
-			return ki, err
-		}
-	}
-
-	// calling 'TYPE' resets the LRU status of the key, so run it afterwards
-	typeStr, err := redis.String(conn.Do("TYPE", ki.key))
+	typeStr, err := redis.String(conn.Do("TYPE", key))
 	if err != nil {
-		return ki, err
+		return key, TypeUnknown, err
 	}
-	ki.vt = ValueType(typeStr)
 
-	return ki, nil
+	return key, ValueType(typeStr), nil
 }
 
 // keyCount obtains a the number of keys in the redis instance.
@@ -179,24 +152,23 @@ func keyCount(conn redis.Conn) (count int64, err error) {
 	return 0, ErrNoKeys
 }
 
-func sampleString(ki *keyInfo, conn redis.Conn, aggregator Aggregator, stats map[string]*Results) error {
-	val, err := redis.String(conn.Do("GET", ki.key))
+func sampleString(key string, conn redis.Conn, aggregator Aggregator, stats map[string]*Results) error {
+	val, err := redis.String(conn.Do("GET", key))
 	if err != nil {
 		return err
 	}
 
-	for _, agg := range aggregator.Groups(ki.key, TypeString) {
+	for _, agg := range aggregator.Groups(key, TypeString) {
 		s := ensureEntry(stats, agg, NewResults)
-		s.observeString(ki.key, val)
-		s.observeLRU(ki.lru)
+		s.observeString(key, val)
 	}
 	return nil
 }
 
-func sampleList(ki *keyInfo, conn redis.Conn, aggregator Aggregator, stats map[string]*Results) error {
+func sampleList(key string, conn redis.Conn, aggregator Aggregator, stats map[string]*Results) error {
 	// TODO: Let's not always get the first element, like the orig. sampler
-	conn.Send("LLEN", ki.key)
-	conn.Send("LRANGE", ki.key, 0, 0)
+	conn.Send("LLEN", key)
+	conn.Send("LRANGE", key, 0, 0)
 	replies, err := flush(conn)
 	if err != nil {
 		return err
@@ -209,18 +181,17 @@ func sampleList(ki *keyInfo, conn redis.Conn, aggregator Aggregator, stats map[s
 			return err
 		}
 
-		for _, g := range aggregator.Groups(ki.key, TypeList) {
+		for _, g := range aggregator.Groups(key, TypeList) {
 			s := ensureEntry(stats, g, NewResults)
-			s.observeList(ki.key, l, ms[0])
-			s.observeLRU(ki.lru)
+			s.observeList(key, l, ms[0])
 		}
 	}
 	return nil
 }
 
-func sampleSet(ki *keyInfo, conn redis.Conn, aggregator Aggregator, stats map[string]*Results) error {
-	conn.Send("SCARD", ki.key)
-	conn.Send("SRANDMEMBER", ki.key)
+func sampleSet(key string, conn redis.Conn, aggregator Aggregator, stats map[string]*Results) error {
+	conn.Send("SCARD", key)
+	conn.Send("SRANDMEMBER", key)
 	replies, err := flush(conn)
 	if err != nil {
 		return err
@@ -233,19 +204,18 @@ func sampleSet(ki *keyInfo, conn redis.Conn, aggregator Aggregator, stats map[st
 			return err
 		}
 
-		for _, g := range aggregator.Groups(ki.key, TypeSet) {
+		for _, g := range aggregator.Groups(key, TypeSet) {
 			s := ensureEntry(stats, g, NewResults)
-			s.observeSet(ki.key, l, m)
-			s.observeLRU(ki.lru)
+			s.observeSet(key, l, m)
 		}
 	}
 	return nil
 }
 
-func sampleSortedSet(ki *keyInfo, conn redis.Conn, aggregator Aggregator, stats map[string]*Results) error {
-	conn.Send("ZCARD", ki.key)
+func sampleSortedSet(key string, conn redis.Conn, aggregator Aggregator, stats map[string]*Results) error {
+	conn.Send("ZCARD", key)
 	// TODO: Let's not always get the first element, like the orig. sampler
-	conn.Send("ZRANGE", ki.key, 0, 0)
+	conn.Send("ZRANGE", key, 0, 0)
 	replies, err := flush(conn)
 	if err != nil {
 		return err
@@ -258,25 +228,24 @@ func sampleSortedSet(ki *keyInfo, conn redis.Conn, aggregator Aggregator, stats 
 			return err
 		}
 
-		for _, g := range aggregator.Groups(ki.key, TypeSortedSet) {
+		for _, g := range aggregator.Groups(key, TypeSortedSet) {
 			s := ensureEntry(stats, g, NewResults)
-			s.observeSortedSet(ki.key, l, ms[0])
-			s.observeLRU(ki.lru)
+			s.observeSortedSet(key, l, ms[0])
 		}
 	}
 	return nil
 }
 
-func sampleHash(ki *keyInfo, conn redis.Conn, aggregator Aggregator, stats map[string]*Results) error {
-	conn.Send("HLEN", ki.key)
-	conn.Send("HKEYS", ki.key)
+func sampleHash(key string, conn redis.Conn, aggregator Aggregator, stats map[string]*Results) error {
+	conn.Send("HLEN", key)
+	conn.Send("HKEYS", key)
 	replies, err := flush(conn)
 	if err != nil {
 		return err
 	}
 
 	if len(replies) >= 2 {
-		for _, g := range aggregator.Groups(ki.key, TypeHash) {
+		for _, g := range aggregator.Groups(key, TypeHash) {
 
 			// TODO: Let's not always get the first hash field, like the orig. sampler
 			l, err := redis.Int(replies[0], nil)
@@ -284,13 +253,12 @@ func sampleHash(ki *keyInfo, conn redis.Conn, aggregator Aggregator, stats map[s
 			if err != nil {
 				return err
 			}
-			val, err := redis.String(conn.Do("HGET", ki.key, fields[0]))
+			val, err := redis.String(conn.Do("HGET", key, fields[0]))
 			if err != nil {
 				return err
 			}
 			s := ensureEntry(stats, g, NewResults)
-			s.observeHash(ki.key, l, fields[0], val)
-			s.observeLRU(ki.lru)
+			s.observeHash(key, l, fields[0], val)
 		}
 	}
 	return nil
@@ -347,7 +315,7 @@ func Run(opts Options, aggregator Aggregator) (map[string]*Results, int64, error
 	lastInterval := 0
 
 	for i := 0; i < numSamples; i++ {
-		ki, err := randomKey(conn, opts.LRUStats)
+		key, vt, err := randomKey(conn)
 		if err != nil {
 			return stats, keys, err
 		}
@@ -357,29 +325,29 @@ func Run(opts Options, aggregator Aggregator) (map[string]*Results, int64, error
 			lastInterval = i / interval
 		}
 
-		switch ValueType(ki.vt) {
+		switch ValueType(vt) {
 		case TypeString:
-			if err = sampleString(ki, conn, aggregator, stats); err != nil {
+			if err = sampleString(key, conn, aggregator, stats); err != nil {
 				return stats, keys, err
 			}
 		case TypeList:
-			if err = sampleList(ki, conn, aggregator, stats); err != nil {
+			if err = sampleList(key, conn, aggregator, stats); err != nil {
 				return stats, keys, err
 			}
 		case TypeSet:
-			if err = sampleSet(ki, conn, aggregator, stats); err != nil {
+			if err = sampleSet(key, conn, aggregator, stats); err != nil {
 				return stats, keys, err
 			}
 		case TypeSortedSet:
-			if err = sampleSortedSet(ki, conn, aggregator, stats); err != nil {
+			if err = sampleSortedSet(key, conn, aggregator, stats); err != nil {
 				return stats, keys, err
 			}
 		case TypeHash:
-			if err = sampleHash(ki, conn, aggregator, stats); err != nil {
+			if err = sampleHash(key, conn, aggregator, stats); err != nil {
 				return stats, keys, err
 			}
 		default:
-			return stats, keys, fmt.Errorf("unknown type for redis key: %s", ki.key)
+			return stats, keys, fmt.Errorf("unknown type for redis key: %s", key)
 		}
 	}
 	return stats, keys, nil
