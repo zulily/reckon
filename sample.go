@@ -274,7 +274,7 @@ func max(a, b int) int {
 
 // Run performs the configured sampling operation against the redis instance,
 // returning aggregated statistics using the provided Aggregator, as well as
-// the actual key count for the redis instance.  If any errors occurr, the
+// the actual key count for the redis instance.  If any errors occur, the
 // sampling is short-circuited, and the error is returned.  In such a case, the
 // results should be considered invalid.
 func Run(opts Options, aggregator Aggregator) (map[string]*Results, int64, error) {
