@@ -22,19 +22,19 @@ import (
 	"os"
 	"strings"
 
-	"github.com/zulily/sampler"
+	"github.com/zulily/reckon"
 )
 
 // aggregateByFirst letter aggregates redis stats according the first letter of the redis key
-func aggregateByFirstLetter(key string, valueType sampler.ValueType) []string {
+func aggregateByFirstLetter(key string, valueType reckon.ValueType) []string {
 	return []string{key[:1]}
 }
 
 // setsThatStartWithA ignores any sampled key that is not a set or does not
 // start with the letter 'a'.  It aggregates keys that DO meet this criteria up
 // to a group named (appropriately) "setsThatStartWithA".
-func setsThatStartWithA(key string, valueType sampler.ValueType) []string {
-	if strings.HasPrefix(key, "a") && valueType == sampler.TypeSet {
+func setsThatStartWithA(key string, valueType reckon.ValueType) []string {
+	if strings.HasPrefix(key, "a") && valueType == reckon.TypeSet {
 		return []string{"setsThatStartWithA"}
 	}
 	return []string{}
@@ -42,13 +42,13 @@ func setsThatStartWithA(key string, valueType sampler.ValueType) []string {
 
 func main() {
 
-	opts := sampler.Options{}
+	opts := reckon.Options{}
 	flag.StringVar(&opts.Host, "host", "localhost", "the hostname of the redis server")
 	flag.IntVar(&opts.Port, "port", 6379, "the port of the redis server")
 	flag.IntVar(&opts.MinSamples, "min-samples", 50, "number of random samples to take (should be <= the number of keys in the redis instance")
 	flag.Parse()
 
-	stats, keyCount, err := sampler.Run(opts, sampler.AggregatorFunc(sampler.AnyKey))
+	stats, keyCount, err := reckon.Run(opts, reckon.AggregatorFunc(reckon.AnyKey))
 
 	if err != nil {
 		log.Fatalf("ERROR: %v\n", err)
@@ -63,7 +63,7 @@ func main() {
 			panic(err)
 		} else {
 			defer f.Close()
-			if err := sampler.RenderHTML(v, f); err != nil {
+			if err := reckon.RenderHTML(v, f); err != nil {
 				panic(err)
 			}
 		}

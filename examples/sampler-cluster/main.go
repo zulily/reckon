@@ -21,22 +21,22 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/zulily/sampler"
+	"github.com/zulily/reckon"
 )
 
 // keysThatStartWithA aggregates sampled keys that start with the letter 'a',
 // and ignores any other key.  It aggregates such keys to a group named
 // (appropriately) "starts-with-a".
-func keysThatStartWithA(key string, valueType sampler.ValueType) []string {
+func keysThatStartWithA(key string, valueType reckon.ValueType) []string {
 	if strings.HasPrefix(key, "a") {
 		return []string{"starts-with-a"}
 	}
 	return []string{}
 }
 
-// samplerResult allow us to return results OR an error on the same chan
-type samplerResult struct {
-	s        map[string]*sampler.Results
+// reckonResult allow us to return results OR an error on the same chan
+type reckonResult struct {
+	s        map[string]*reckon.Results
 	keyCount int64
 	err      error
 }
@@ -44,31 +44,31 @@ type samplerResult struct {
 func main() {
 
 	// Sample 100 keys from each of three redis instances, all running on different ports on localhost
-	redises := []sampler.Options{
-		sampler.Options{Host: "localhost", Port: 6379, MinSamples: 100},
-		sampler.Options{Host: "localhost", Port: 6380, MinSamples: 100},
-		sampler.Options{Host: "localhost", Port: 6381, MinSamples: 100},
+	redises := []reckon.Options{
+		reckon.Options{Host: "localhost", Port: 6379, MinSamples: 100},
+		reckon.Options{Host: "localhost", Port: 6380, MinSamples: 100},
+		reckon.Options{Host: "localhost", Port: 6381, MinSamples: 100},
 	}
 
-	aggregator := sampler.AggregatorFunc(sampler.AnyKey)
+	aggregator := reckon.AggregatorFunc(reckon.AnyKey)
 
 	var wg sync.WaitGroup
-	results := make(chan samplerResult)
+	results := make(chan reckonResult)
 
 	wg.Add(len(redises))
 
 	// Sample each redis in its own goroutine
 	for _, redis := range redises {
-		go func(opts sampler.Options) {
+		go func(opts reckon.Options) {
 			defer wg.Done()
 			log.Printf("Sampling %d keys from redis at: %s:%d...\n", opts.MinSamples, opts.Host, opts.Port)
-			s, keyCount, err := sampler.Run(opts, aggregator)
-			results <- samplerResult{s: s, keyCount: keyCount, err: err}
+			s, keyCount, err := reckon.Run(opts, aggregator)
+			results <- reckonResult{s: s, keyCount: keyCount, err: err}
 		}(redis)
 	}
 
 	// Collect and merge all the results
-	totals := make(map[string]*sampler.Results)
+	totals := make(map[string]*reckon.Results)
 	totalKeyCount := int64(0)
 
 	go func() {
@@ -97,7 +97,7 @@ func main() {
 	log.Printf("total key count: %d\n", totalKeyCount)
 	for k, v := range totals {
 		log.Printf("Totals for: %s:\n", k)
-		err := sampler.RenderText(v, os.Stdout)
+		err := reckon.RenderText(v, os.Stdout)
 		if err != nil {
 			log.Fatalf("ERROR: %v\n", err)
 		}

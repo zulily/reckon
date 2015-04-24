@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sampler
+package reckon
 
 import (
 	"errors"
@@ -26,7 +26,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 )
 
-// Options is a configuration struct that instructs the sampler pkg to sample
+// Options is a configuration struct that instructs the reckon pkg to sample
 // the redis instance listening on a particular host/port with a specified
 // number/percentage of random keys.
 type Options struct {
@@ -166,7 +166,7 @@ func sampleString(key string, conn redis.Conn, aggregator Aggregator, stats map[
 }
 
 func sampleList(key string, conn redis.Conn, aggregator Aggregator, stats map[string]*Results) error {
-	// TODO: Let's not always get the first element, like the orig. sampler
+	// TODO: Let's not always get the first element, like the orig. reckon
 	conn.Send("LLEN", key)
 	conn.Send("LRANGE", key, 0, 0)
 	replies, err := flush(conn)
