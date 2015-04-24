@@ -1,4 +1,4 @@
-# Sampler
+# Reckon
 
 > A golang package for sampling and reporting on random keys on a set of redis instances
 

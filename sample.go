@@ -83,7 +83,7 @@ func AnyKey(key string, valueType ValueType) []string {
 
 // An Aggregator returns 0 or more arbitrary strings, to be used during a
 // sampling operation as aggregation groups or "buckets". For example, an
-// Aggregator that takes the first letter of the key would cause a Sampler to
+// Aggregator that takes the first letter of the key would cause reckon to
 // aggregate stats by each letter of the alphabet
 type Aggregator interface {
 	Groups(key string, valueType ValueType) []string
