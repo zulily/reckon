@@ -1,6 +1,6 @@
 # Reckon
 
-> A golang package for sampling and reporting on random keys on a set of redis instances
+> A Go package for sampling and reporting on random keys on a set of redis instances
 
 Inspired/influenced by [redis-sampler](https://github.com/antirez/redis-sampler)
 from [antirez](https://github.com/antirez), the author of redis.
