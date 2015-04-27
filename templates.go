@@ -140,7 +140,7 @@ Element Sizes ({{template "stats" .ListElementSizes}}):
 						<h3>Example keys:</h3> {{template "examples" .StringKeys}}
 						<h3>Value Sizes: {{template "stats" .StringSizes}}</h3>
 						{{template "freq" .StringSizes}}
-						<h3><var>2</var><sup>n</sup> Value Sizes:</h3> {{template "freq" power .StringSizes}}
+						<h3>2<sup><var>n</var></sup> Value Sizes:</h3> {{template "freq" power .StringSizes}}
 					</div>
 				</div>
 			{{ end }}
@@ -152,12 +152,12 @@ Element Sizes ({{template "stats" .ListElementSizes}}):
 						<h3>Example keys:</h3> {{template "examples" .SetKeys}}
 						<h3>Sizes: {{template "stats" .SetSizes}}</h3>
 						{{template "freq" .SetSizes}}
-						<h3><var>2</var><sup>n</sup> Sizes:</h3> {{template "freq" power .SetSizes}}
+						<h3>2<sup><var>n</var></sup> Sizes:</h3> {{template "freq" power .SetSizes}}
 
 						<h3>Example elements:</h3> {{template "examples" .SetElements}}
 						<h3>Element Sizes: {{template "stats" .SetElementSizes}}</h3>
 						{{template "freq" .SetElementSizes}}
-						<h3><var>2</var><sup>n</sup> Element Sizes:</h3> {{template "freq" power .SetElementSizes}}
+						<h3>2<sup><var>n</var></sup> Element Sizes:</h3> {{template "freq" power .SetElementSizes}}
 					</div>
 				</div>
 			{{ end }}
@@ -169,12 +169,12 @@ Element Sizes ({{template "stats" .ListElementSizes}}):
 						<h3>Example keys:</h3> {{template "examples" .SortedSetKeys}}
 						<h3>Sizes: {{template "stats" .SortedSetSizes}}</h3>
 						{{template "freq" .SortedSetSizes}}
-						<h3><var>2</var><sup>n</sup> Sizes:</h3> {{template "freq" power .SortedSetSizes}}
+						<h3>2<sup><var>n</var></sup> Sizes:</h3> {{template "freq" power .SortedSetSizes}}
 
 						<h3>Example elements:</h3> {{template "examples" .SortedSetElements}}
 						<h3>Element Sizes: {{template "stats" .SortedSetElementSizes}}</h3>
 						{{template "freq" .SortedSetElementSizes}}
-						<h3><var>2</var><sup>n</sup> Element Sizes:</h3> {{template "freq" power .SortedSetElementSizes}}
+						<h3>2<sup><var>n</var></sup> Element Sizes:</h3> {{template "freq" power .SortedSetElementSizes}}
 					</div>
 				</div>
 			{{ end }}
@@ -186,12 +186,12 @@ Element Sizes ({{template "stats" .ListElementSizes}}):
 						<h3>Example keys:</h3> {{template "examples" .ListKeys}}
 						<h3>Sizes: {{template "stats" .ListSizes}}</h3>
 						{{template "freq" .ListSizes}}
-						<h3><var>2</var><sup>n</sup> Sizes:</h3> {{template "freq" power .ListSizes}}
+						<h3>2<sup><var>n</var></sup> Sizes:</h3> {{template "freq" power .ListSizes}}
 
 						<h3>Example elements:</h3> {{template "examples" .ListElements}}
 						<h3>Element Sizes: {{template "stats" .ListElementSizes}}</h3>
 						{{template "freq" .ListElementSizes}}
-						<h3><var>2</var><sup>n</sup> Element Sizes:</h3> {{template "freq" power .ListElementSizes}}
+						<h3>2<sup><var>n</var></sup> Element Sizes:</h3> {{template "freq" power .ListElementSizes}}
 					</div>
 				</div>
 			{{ end }}
@@ -203,17 +203,17 @@ Element Sizes ({{template "stats" .ListElementSizes}}):
 						<h3>Example keys:</h3> {{template "examples" .HashKeys}}
 						<h3>Sizes: {{template "stats" .HashSizes}}</h3>
 						{{template "freq" .HashSizes}}
-						<h3><var>2</var><sup>n</sup> Sizes:</h3> {{template "freq" power .HashSizes}}
+						<h3>2<sup><var>n</var></sup> Sizes:</h3> {{template "freq" power .HashSizes}}
 
 						<h3>Example elements:</h3> {{template "examples" .HashElements}}
 						<h3>Element Sizes: {{template "stats" .HashElementSizes}}</h3>
 						{{template "freq" .HashElementSizes}}
-						<h3><var>2</var><sup>n</sup> Element Sizes:</h3> {{template "freq" power .HashElementSizes}}
+						<h3>2<sup><var>n</var></sup> Element Sizes:</h3> {{template "freq" power .HashElementSizes}}
 
 						<h3>Example values:</h3> {{template "examples" .HashValues}}
 						<h3>Value Sizes: {{template "stats" .HashValueSizes}}</h3>
 						{{template "freq" .HashValueSizes}}
-						<h3><var>2</var><sup>n</sup> Value Sizes:</h3> {{template "freq" power .HashValueSizes}}
+						<h3>2<sup><var>n</var></sup> Value Sizes:</h3> {{template "freq" power .HashValueSizes}}
 					</div>
 				</div>
 			{{ end }}
