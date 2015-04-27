@@ -16,23 +16,13 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
-	"strings"
 	"sync"
 
 	"github.com/zulily/reckon"
 )
-
-// keysThatStartWithA aggregates sampled keys that start with the letter 'a',
-// and ignores any other key.  It aggregates such keys to a group named
-// (appropriately) "starts-with-a".
-func keysThatStartWithA(key string, valueType reckon.ValueType) []string {
-	if strings.HasPrefix(key, "a") {
-		return []string{"starts-with-a"}
-	}
-	return []string{}
-}
 
 // reckonResult allow us to return results OR an error on the same chan
 type reckonResult struct {
@@ -74,9 +64,9 @@ func main() {
 	go func() {
 		for r := range results {
 			if r.err != nil {
-				log.Fatalf("ERROR: %v\n", r.err.Error())
+				panic(r.err)
 			}
-			log.Printf("Got results back from a redis!")
+			log.Println("Got results back from a redis instance!")
 
 			totalKeyCount += r.keyCount
 			for k, v := range r.s {
@@ -90,16 +80,23 @@ func main() {
 		}
 	}()
 
-	// render the final results when everything is complete
+	// render the final results to HTML when everything is complete
 	wg.Wait()
 	close(results)
 
 	log.Printf("total key count: %d\n", totalKeyCount)
 	for k, v := range totals {
-		log.Printf("Totals for: %s:\n", k)
-		err := reckon.RenderText(v, os.Stdout)
-		if err != nil {
-			log.Fatalf("ERROR: %v\n", err)
+
+		v.Name = k
+		if f, err := os.Create(fmt.Sprintf("output-%s.html", k)); err != nil {
+			panic(err)
+		} else {
+			defer f.Close()
+			log.Printf("Rendering totals for: %s to %s:\n", k, f.Name())
+			if err := reckon.RenderHTML(v, f); err != nil {
+				panic(err)
+			}
 		}
+
 	}
 }

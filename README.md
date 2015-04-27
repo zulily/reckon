@@ -115,9 +115,9 @@ Some example binaries are included that demonstrate various usages of the
 `reckon` package, the simplest of which samples from a single redis instance.
 
 To sample 10K keys from a redis instance running on `yourserver:6379` and print
-the results to `stdout`:
+the results to static .html files in the current directory:
 
-    $ sampler-single -host=yourserver -port=6379 -num-keys=10000
+    $ reckoning-single-instance -host=yourserver -port=6379 -min-samples=10000
 
 ## Limitations
 

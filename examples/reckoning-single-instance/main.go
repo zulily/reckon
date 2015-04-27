@@ -25,6 +25,8 @@ import (
 	"github.com/zulily/reckon"
 )
 
+// (completely contrived) example Aggregator funcs:
+
 // aggregateByFirst letter aggregates redis stats according the first letter of the redis key
 func aggregateByFirstLetter(key string, valueType reckon.ValueType) []string {
 	return []string{key[:1]}
@@ -49,9 +51,8 @@ func main() {
 	flag.Parse()
 
 	stats, keyCount, err := reckon.Run(opts, reckon.AggregatorFunc(reckon.AnyKey))
-
 	if err != nil {
-		log.Fatalf("ERROR: %v\n", err)
+		panic(err)
 	}
 
 	log.Printf("total key count: %d\n", keyCount)
@@ -59,10 +60,11 @@ func main() {
 		log.Printf("stats for: %s\n", k)
 
 		v.Name = k
-		if f, err := os.Create(fmt.Sprintf("output/output-%s.html", k)); err != nil {
+		if f, err := os.Create(fmt.Sprintf("output-%s.html", k)); err != nil {
 			panic(err)
 		} else {
 			defer f.Close()
+			log.Printf("Rendering totals for: '%s' to %s:\n", k, f.Name())
 			if err := reckon.RenderHTML(v, f); err != nil {
 				panic(err)
 			}
