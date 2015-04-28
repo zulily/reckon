@@ -239,6 +239,7 @@ Element Sizes ({{template "stats" .ListElementSizes}}):
 	{{range $k, $v := .}}
 		<li><code>{{$k}}</code></li>
 	{{end}}
+	</ul>
 {{end}}
 
 {{define "freq"}}
