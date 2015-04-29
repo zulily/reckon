@@ -76,9 +76,9 @@ var (
 )
 
 // AnyKey is an AggregatorFunc that puts any sampled key (regardless of key
-// name or redis data type) into a generic "any" bucket.
+// name or redis data type) into a generic "any-key" bucket.
 func AnyKey(key string, valueType ValueType) []string {
-	return []string{"any"}
+	return []string{"any-key"}
 }
 
 // An Aggregator returns 0 or more arbitrary strings, to be used during a
