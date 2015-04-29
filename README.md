@@ -17,10 +17,9 @@ dataset is, especially when you've got multiple codebases or teams using the
 same redis instance(s), or you're sharding your dataset over a large number of
 redis instances.
 
-While there is an [existing solution](https://github.com/antirez/redis-sampler) for
-sampling a redis keyspace, the `reckon` package has a few advantages:
-
-While there are some [existing](https://github.com/antirez/redis-sampler) [solutions](https://github.com/snmaynard/redis-audit) for sampling a redis keyspace, the `reckon` package has a few advantages:
+While there are some [existing](https://github.com/antirez/redis-sampler)
+[solutions](https://github.com/snmaynard/redis-audit) for sampling a redis
+keyspace, the `reckon` package has a few advantages:
 
 ### Programmatic access to sampling results:
 
@@ -43,21 +42,21 @@ simple, contrived examples:
 
 To aggregate only redis sets whose keys start with the letter a:
 
-func setsThatStartWithA(key string, valueType reckon.ValueType) []string {
-  if strings.HasPrefix(key, "a") && valueType == reckon.TypeSet {
-    return []string{"setsThatStartWithA"}
-  }
-  return []string{}
-}
+    func setsThatStartWithA(key string, valueType reckon.ValueType) []string {
+      if strings.HasPrefix(key, "a") && valueType == reckon.TypeSet {
+        return []string{"setsThatStartWithA"}
+      }
+      return []string{}
+    }
+
 To aggregate sampled keys of any redis data type that are longer than 80 characters:
 
-
-func longKeys(key string, valueType reckon.ValueType) []string {
-  if len(key) > 80 {
-    return []string{"long-keys"}
-  }
-  return []string{}
-}
+    func longKeys(key string, valueType reckon.ValueType) []string {
+    if len(key) > 80 {
+      return []string{"long-keys"}
+      }
+      return []string{}
+    }
 
 ### Reports
 
@@ -65,8 +64,7 @@ When you are done sampling, aggregating, and/or combining the results produced
 by `reckon` you can easily produce a report of the findings in either plain-text
 or static HTML. An example HTML report is shown below:
 
-!Sample HTML report
-(https://raw.githubusercontent.com/zulily/reckon/master/random-sets.png)
+![Sample HTML report](https://github.com/zulily/reckon/blob/master/random-sets.png)
 
 
 ## Quick Start
@@ -78,7 +76,8 @@ Get the code:
 Use one of the provided example binaries to sample from a redis instance and
 output results to static HTML files in the current directory:
 
-    $ reckoning-single-instance -host=yourserver -port=6379 -sample-rate=0.1 -min-samples=100
+    $ reckoning-single-instance -host=localhost -port=6379 \
+        -sample-rate=0.1 -min-samples=100
 
 Or to sample from multiple instances:
 
