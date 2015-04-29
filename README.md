@@ -21,7 +21,7 @@ While there are some [existing](https://github.com/antirez/redis-sampler)
 [solutions](https://github.com/snmaynard/redis-audit) for sampling a redis
 keyspace, the `reckon` package has a few advantages:
 
-### Programmatic access to sampling results:
+### Programmatic access to sampling results
 
 Results are returned in data structures, not just printed to stdout or a file.
 This is what allows a user of reckon to sample data across a cluster of redis
