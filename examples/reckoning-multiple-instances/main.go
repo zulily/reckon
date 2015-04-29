@@ -16,13 +16,49 @@
 package main
 
 import (
+	"bytes"
+	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
+	"strconv"
 	"sync"
 
 	"github.com/zulily/reckon"
 )
+
+// Address represents a host:port address.
+type Address struct {
+	Host string
+	Port int
+}
+
+// Addresses is a slice of Address instances.  It implements the flag.Value
+// interface, and thus can be used with the Var func in the flag pkg
+type Addresses []Address
+
+func (a *Addresses) String() string {
+	var buf bytes.Buffer
+	for _, addr := range *a {
+		buf.WriteString(net.JoinHostPort(addr.Host, strconv.Itoa(addr.Port)))
+	}
+	return buf.String()
+}
+
+func (a *Addresses) Set(value string) error {
+	host, port, err := net.SplitHostPort(value)
+	if err != nil {
+		return err
+	}
+
+	p, err := strconv.Atoi(port)
+	if err != nil {
+		return err
+	}
+	*a = append(*a, Address{Host: host, Port: p})
+	return nil
+}
 
 // reckonResult allow us to return results OR an error on the same chan
 type reckonResult struct {
@@ -31,30 +67,45 @@ type reckonResult struct {
 	err      error
 }
 
+type options struct {
+	redises    Addresses
+	minSamples int
+	sampleRate float64
+}
+
+var (
+	opts options
+)
+
 func main() {
 
+	flag.Float64Var(&opts.sampleRate, "sample-rate", 0.1, "The percentage of the keyspace to sample on each redis")
+	flag.IntVar(&opts.minSamples, "min-samples", 100, "minimum number of keys to sample on each redis")
+	flag.Var(&opts.redises, "redis", "host:port address of a redis instance to sample (may be specified multiple times)")
+	flag.Parse()
+
 	// Sample 100 keys from each of three redis instances, all running on different ports on localhost
-	redises := []reckon.Options{
-		reckon.Options{Host: "localhost", Port: 6379, MinSamples: 100},
-		reckon.Options{Host: "localhost", Port: 6380, MinSamples: 100},
-		reckon.Options{Host: "localhost", Port: 6381, MinSamples: 100},
+	var reckonOpts []reckon.Options
+
+	for _, redis := range opts.redises {
+		opt := reckon.Options{Host: redis.Host, Port: redis.Port, MinSamples: opts.minSamples, SampleRate: float32(opts.sampleRate)}
+		reckonOpts = append(reckonOpts, opt)
 	}
 
 	aggregator := reckon.AggregatorFunc(reckon.AnyKey)
 
 	var wg sync.WaitGroup
 	results := make(chan reckonResult)
-
-	wg.Add(len(redises))
+	wg.Add(len(reckonOpts))
 
 	// Sample each redis in its own goroutine
-	for _, redis := range redises {
+	for _, instanceOpts := range reckonOpts {
 		go func(opts reckon.Options) {
 			defer wg.Done()
 			log.Printf("Sampling %d keys from redis at: %s:%d...\n", opts.MinSamples, opts.Host, opts.Port)
 			s, keyCount, err := reckon.Run(opts, aggregator)
 			results <- reckonResult{s: s, keyCount: keyCount, err: err}
-		}(redis)
+		}(instanceOpts)
 	}
 
 	// Collect and merge all the results

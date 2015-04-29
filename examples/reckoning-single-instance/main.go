@@ -44,12 +44,15 @@ func setsThatStartWithA(key string, valueType reckon.ValueType) []string {
 
 func main() {
 
+	var sampleRate float64
 	opts := reckon.Options{}
 	flag.StringVar(&opts.Host, "host", "localhost", "the hostname of the redis server")
 	flag.IntVar(&opts.Port, "port", 6379, "the port of the redis server")
 	flag.IntVar(&opts.MinSamples, "min-samples", 50, "number of random samples to take (should be <= the number of keys in the redis instance")
+	flag.Float64Var(&sampleRate, "sample-rate", 0.1, "The percentage of the keyspace to sample on each redis")
 	flag.Parse()
 
+	opts.SampleRate = float32(sampleRate)
 	stats, keyCount, err := reckon.Run(opts, reckon.AggregatorFunc(reckon.AnyKey))
 	if err != nil {
 		panic(err)
