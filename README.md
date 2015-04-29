@@ -73,6 +73,10 @@ Get the code:
 
     $ go get github.com/zulily/reckon
 
+Build the example binaries:
+    $ cd $GOPATH/src/github.com/zulily/reckon
+    $ go install -v ./...
+
 Use one of the provided example binaries to sample from a redis instance and
 output results to static HTML files in the current directory:
 
