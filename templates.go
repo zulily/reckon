@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package reckon
 
 import (
@@ -57,7 +58,7 @@ func barChart(domElement string, freq map[int]int64) chartData {
 	}
 }
 
-// RenderHTML renders a plaintext report for a Results instance to the supplied
+// RenderHTML renders an HTML report for a Results instance to the supplied
 // io.Writer
 func RenderHTML(s *Results, out io.Writer) error {
 
@@ -86,7 +87,7 @@ func RenderHTML(s *Results, out io.Writer) error {
 	return t.ExecuteTemplate(out, "base", s)
 }
 
-// RenderText renders an HTML report for a Results instance to the supplied
+// RenderText renders a plaintext report for a Results instance to the supplied
 // io.Writer
 func RenderText(s *Results, out io.Writer) error {
 

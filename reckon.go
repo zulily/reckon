@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+// reckon is a package for sampling and reporting on the keys and values in one
+// or more redis instances
 package reckon
 
 import (
@@ -55,14 +58,19 @@ type ValueType string
 var (
 	// TypeString represents a redis string value
 	TypeString ValueType = "string"
+
 	// TypeSortedSet represents a redis sorted set value
 	TypeSortedSet ValueType = "zset"
+
 	// TypeSet represents a redis set value
 	TypeSet ValueType = "set"
+
 	// TypeHash represents a redis hash value
 	TypeHash ValueType = "hash"
+
 	// TypeList represents a redis list value
 	TypeList ValueType = "list"
+
 	// TypeUnknown means that the redis value type is undefined, and indicates an error
 	TypeUnknown ValueType = "unknown"
 
