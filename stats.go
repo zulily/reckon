@@ -271,25 +271,25 @@ func (r *Results) Merge(other *Results) {
 
 func (r *Results) observeSet(key string, length int, member string) {
 	r.KeyCount++
-	r.SetSizes[length] += 1
-	r.SetElementSizes[len(member)] += 1
+	r.SetSizes[length]++
+	r.SetElementSizes[len(member)]++
 	add(r.SetKeys, key, MaxExampleKeys)
 	add(r.SetElements, member, MaxExampleElements)
 }
 
 func (r *Results) observeSortedSet(key string, length int, member string) {
 	r.KeyCount++
-	r.SortedSetSizes[length] += 1
-	r.SortedSetElementSizes[len(member)] += 1
+	r.SortedSetSizes[length]++
+	r.SortedSetElementSizes[len(member)]++
 	add(r.SortedSetKeys, key, MaxExampleKeys)
 	add(r.SortedSetElements, member, MaxExampleElements)
 }
 
 func (r *Results) observeHash(key string, length int, field string, value string) {
 	r.KeyCount++
-	r.HashSizes[length] += 1
-	r.HashValueSizes[len(value)] += 1
-	r.HashElementSizes[len(field)] += 1
+	r.HashSizes[length]++
+	r.HashValueSizes[len(value)]++
+	r.HashElementSizes[len(field)]++
 	add(r.HashKeys, key, MaxExampleKeys)
 	add(r.HashElements, field, MaxExampleElements)
 	add(r.HashValues, value, MaxExampleValues)
@@ -297,15 +297,15 @@ func (r *Results) observeHash(key string, length int, field string, value string
 
 func (r *Results) observeList(key string, length int, member string) {
 	r.KeyCount++
-	r.ListSizes[length] += 1
-	r.ListElementSizes[len(member)] += 1
+	r.ListSizes[length]++
+	r.ListElementSizes[len(member)]++
 	add(r.ListKeys, key, MaxExampleKeys)
 	add(r.ListElements, member, MaxExampleElements)
 }
 
 func (r *Results) observeString(key, value string) {
 	r.KeyCount++
-	r.StringSizes[len(value)] += 1
+	r.StringSizes[len(value)]++
 	add(r.StringKeys, key, MaxExampleKeys)
 	add(r.StringValues, value, MaxExampleValues)
 }

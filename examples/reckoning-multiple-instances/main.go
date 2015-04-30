@@ -47,6 +47,8 @@ func (a *Addresses) String() string {
 	return buf.String()
 }
 
+// Set is part of the flag.Value interface to allow Addresses to be used as
+// flag values
 func (a *Addresses) Set(value string) error {
 	host, port, err := net.SplitHostPort(value)
 	if err != nil {

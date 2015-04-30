@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-// reckon is a package for sampling and reporting on the keys and values in one
-// or more redis instances
+// Package reckon provides support for sampling and reporting on the keys and
+// values in one or more redis instances
 package reckon
 
 import (
@@ -76,7 +76,7 @@ var (
 
 	// ErrNoKeys is the error returned when a specified redis instance contains
 	// no keys, or the key count could not be determined
-	ErrNoKeys error = errors.New("No keys are present in the configured redis instance")
+	ErrNoKeys = errors.New("No keys are present in the configured redis instance")
 
 	// keysExpr captures the key count from the matching line of output from
 	// redis' "INFO" command
@@ -275,9 +275,8 @@ func sampleHash(key string, conn redis.Conn, aggregator Aggregator, stats map[st
 func max(a, b int) int {
 	if a > b {
 		return a
-	} else {
-		return b
 	}
+	return b
 }
 
 // Run performs the configured sampling operation against the redis instance,
@@ -308,12 +307,12 @@ func Run(opts Options, aggregator Aggregator) (map[string]*Results, int64, error
 
 	if keys, err = keyCount(conn); err != nil {
 		return stats, keys, err
-	} else {
-		fmt.Printf("redis at %s:%d has %d keys\n", opts.Host, opts.Port, keys)
-		if opts.SampleRate > 0.0 {
-			v := int(float32(keys) * opts.SampleRate)
-			numSamples = max(max(v, numSamples), 1)
-		}
+	}
+
+	fmt.Printf("redis at %s:%d has %d keys\n", opts.Host, opts.Port, keys)
+	if opts.SampleRate > 0.0 {
+		v := int(float32(keys) * opts.SampleRate)
+		numSamples = max(max(v, numSamples), 1)
 	}
 
 	interval := numSamples / 100
