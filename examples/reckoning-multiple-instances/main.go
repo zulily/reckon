@@ -140,7 +140,6 @@ func main() {
 
 	log.Printf("total key count: %d\n", totalKeyCount)
 	for k, v := range totals {
-
 		v.Name = k
 		if f, err := os.Create(fmt.Sprintf("output-%s.html", k)); err != nil {
 			panic(err)

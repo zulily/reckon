@@ -55,6 +55,7 @@ func main() {
 
 	opts.SampleRate = float32(sampleRate)
 	stats, keyCount, err := reckon.Run(opts, reckon.AggregatorFunc(reckon.AnyKey))
+	fmt.Println("run is done")
 	if err != nil {
 		panic(err)
 	}

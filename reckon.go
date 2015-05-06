@@ -25,6 +25,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/garyburd/redigo/redis"
 )
@@ -35,6 +36,8 @@ import (
 type Options struct {
 	Host string
 	Port int
+
+	scanMode bool
 
 	// MinSamples indicates the minimum number of random keys to sample from the redis
 	// instance.  Note that this does not mean **unique** keys, just an absolute
@@ -48,6 +51,12 @@ type Options struct {
 	// sampled will be the greater of the two values, once the key count has been
 	// calculated using the `SampleRate`.
 	SampleRate float32
+
+	// Glob is a glob expression to use when running reckon in scan mode.  The expression
+	// uses the glob-style paterns described at: the at: http://redis.io/commands/keys
+	// An empty string will match no keys and is therefore an invalid glob expression.
+	// This setting has no effect when running reckon in "sample mode".
+	Glob string
 }
 
 // A ValueType represents the various data types that redis can store. The
@@ -83,16 +92,16 @@ var (
 	keysExpr = regexp.MustCompile("^db\\d+:keys=(\\d+),")
 )
 
-// AnyKey is an AggregatorFunc that puts any sampled key (regardless of key
+// AnyKey is an AggregatorFunc that puts any key (regardless of key
 // name or redis data type) into a generic "any-key" bucket.
 func AnyKey(key string, valueType ValueType) []string {
 	return []string{"any-key"}
 }
 
-// An Aggregator returns 0 or more arbitrary strings, to be used during a
-// sampling operation as aggregation groups or "buckets". For example, an
-// Aggregator that takes the first letter of the key would cause reckon to
-// aggregate stats by each letter of the alphabet
+// An Aggregator returns 0 or more arbitrary strings, to be used as aggregation
+// groups or "buckets". For example, an Aggregator that takes the first letter
+// of the key would cause reckon to aggregate stats by each letter of the
+// alphabet.
 type Aggregator interface {
 	Groups(key string, valueType ValueType) []string
 }
@@ -103,7 +112,7 @@ type Aggregator interface {
 // Aggregator object that calls f.
 type AggregatorFunc func(key string, valueType ValueType) []string
 
-// Groups provides 0 or more groups to aggregate `key` to, when sampling redis keys.
+// Groups provides 0 or more groups to aggregate `key` to, when examining redis keys.
 func (f AggregatorFunc) Groups(key string, valueType ValueType) []string {
 	return f(key, valueType)
 }
@@ -126,19 +135,119 @@ func ensureEntry(m map[string]*Results, group string, init func() *Results) *Res
 	return stats
 }
 
-// randomKey obtains a random redis key and its ValueType from the supplied redis connection
-func randomKey(conn redis.Conn) (key string, vt ValueType, err error) {
-	key, err = redis.String(conn.Do("RANDOMKEY"))
-	if err != nil {
-		return key, TypeUnknown, err
+// A keyResult is a convenience struct that allows scanning/sampling methods to
+// return a key, it's (redis) type, and/or an error, using a single channel
+type keyResult struct {
+	key string
+	vt  ValueType
+	err error
+}
+
+// scan uses a connection from the given `pool` to perform a SCAN operation on
+// the redis instance. The `glob` pattern is used to limit the results of the
+// SCAN operation.  The scan runs until termination (as defined by the SCAN
+// documentation at: http://redis.io/commands/scan), or until a value is
+// received on the supplied `quit` channel.
+//
+// Detail on the caveats and semantics of the SCAN operation:
+// http://redis.io/commands/scan
+func scan(pool *redis.Pool, glob string, quit chan struct{}) (chan *keyResult, error) {
+	// A redis scan cursor starts at "0", and is complete only when the cursor value returns to "0"
+	if glob == "" {
+		return nil, errors.New("glob expression is empty; no keys will ever match")
 	}
 
-	typeStr, err := redis.String(conn.Do("TYPE", key))
-	if err != nil {
-		return key, TypeUnknown, err
-	}
+	var cursor string
+	results := make(chan *keyResult, 2)
 
-	return key, ValueType(typeStr), nil
+	go func() {
+		// a conn is NOT go-routine safe, but the pool is.
+		conn := pool.Get()
+		defer func() {
+			close(results)
+			conn.Close()
+		}()
+
+		for cursor != "0" {
+			if cursor == "" {
+				cursor = "0"
+			}
+
+			scanVals, err := redis.Values(conn.Do("SCAN", cursor, "MATCH", glob))
+			if err != nil {
+				results <- &keyResult{err: err}
+				return
+			}
+
+			var keys []string
+			// NOTE: this Scan method does NOT perform a redis SCAN operation!  It's just
+			// an unfortunately named redigo method.
+			if _, err := redis.Scan(scanVals, &cursor, &keys); err != nil {
+				results <- &keyResult{err: err}
+				return
+			}
+			for _, key := range keys {
+				select {
+				case <-quit:
+					fmt.Println("received on quit chan, exiting")
+					return
+				default:
+					typeStr, err := redis.String(conn.Do("TYPE", key))
+					if err != nil {
+						results <- &keyResult{err: err}
+						return
+					}
+					results <- &keyResult{key: key, vt: ValueType(typeStr)}
+				}
+			}
+		}
+		// scan operation complete
+	}()
+
+	return results, nil
+}
+
+// sample uses a connection from the given pool to return random redis keys,
+// along with (redis) type and error information.  Results are supplied
+// over the returned channel until a value is received on the supplied `quit`
+// chan.
+func sample(pool *redis.Pool, quit chan struct{}) (chan *keyResult, error) {
+
+	// This buffering prevents the select below from blocking on the results
+	// channel send while there's a quit channel receive waiting
+	results := make(chan *keyResult, 2)
+
+	go func() {
+		// a conn is NOT go-routine safe, but the pool is.
+		conn := pool.Get()
+
+		defer close(results)
+		defer conn.Close()
+
+		for {
+			select {
+			case <-quit:
+				fmt.Println("recieved on quit chan, exiting")
+				return
+			default:
+				key, err := redis.String(conn.Do("RANDOMKEY"))
+				if err != nil {
+					results <- &keyResult{err: err}
+					return
+				}
+
+				typeStr, err := redis.String(conn.Do("TYPE", key))
+				if err != nil {
+					results <- &keyResult{err: err}
+					return
+				}
+
+				results <- &keyResult{key, ValueType(typeStr), nil}
+			}
+		}
+	}()
+
+	return results, nil
 }
 
 // keyCount obtains a the number of keys in the redis instance.
@@ -279,28 +388,100 @@ func max(a, b int) int {
 	return b
 }
 
+// WithHostPort sets the host and port to use when connecting to a redis
+// instance.
+func WithHostPort(host string, port int) func(*Options) error {
+	return func(opts *Options) error {
+		if host == "" {
+			return errors.New("host cannot be empty")
+		}
+		opts.Host = host
+		opts.Port = port
+		return nil
+	}
+}
+
+// SampleMode returns an Options function that instructs reckon to randomly
+// sample keys.
+//
+// `minSamples` indicates the minimum number of random keys to sample from the redis
+// instance.  Note that this does not mean **unique** keys, just an absolute
+// number of random keys.  Therefore, this number should be small relative to
+// the number of keys in the redis instance.
+
+// `sampleRate` indicates the percentage of the keyspace to sample.
+// Accordingly, the value must be between 0.0 and 1.0.  If a non-zero value is
+// given for both `sampleRate` and `minSamples`, the actual number of keys
+// sampled will be the greater of the two values, once the key count has been
+// calculated using the `sampleRate`.
+func SampleMode(minSamples int, sampleRate float32) func(*Options) error {
+	return func(opts *Options) error {
+		if sampleRate < 0.0 || sampleRate > 1.0 {
+			return errors.New("sample rate must be between 0.0 and 1.0")
+		}
+
+		if minSamples <= 0 && sampleRate == 0.0 {
+			return errors.New("minSamples cannot be <= 0")
+		}
+
+		opts.MinSamples = minSamples
+		opts.SampleRate = sampleRate
+		opts.scanMode = false
+		return nil
+	}
+}
+
+// ScanMode returns an Options function that instructs reckon to perform a
+// redis SCAN operation on the configured redis instance.
+//
+// The `glob` pattern is used to limit the results of the SCAN operation.
+// Detail on the caveats and semantics of the SCAN operation:
+// http://redis.io/commands/scan
+func ScanMode(glob string) func(*Options) error {
+	return func(opts *Options) error {
+		if glob == "" {
+			return errors.New("glob expression is empty; no keys will ever match")
+		}
+		opts.Glob = glob
+		opts.scanMode = true
+		return nil
+	}
+}
+
 // Run performs the configured sampling operation against the redis instance,
 // returning aggregated statistics using the provided Aggregator, as well as
 // the actual key count for the redis instance.  If any errors occur, the
-// sampling is short-circuited, and the error is returned.  In such a case, the
+// operation is short-circuited, and the error is returned.  In such a case, the
 // results should be considered invalid.
-func Run(opts Options, aggregator Aggregator) (map[string]*Results, int64, error) {
+func Run(aggregator Aggregator, fns ...func(*Options) error) (map[string]*Results, int64, error) {
 
 	stats := make(map[string]*Results)
-	var err error
 	var keys int64
+	var err error
 
-	if opts.SampleRate < 0.0 || opts.SampleRate > 1.0 {
-		return stats, keys, errors.New("SampleRate must be between 0.0 and 1.0")
+	opts := &Options{
+		Host:     "localhost",
+		Port:     6379,
+		scanMode: false,
 	}
 
-	if opts.MinSamples <= 0 && opts.SampleRate == 0.0 {
-		return stats, keys, errors.New("MinSamples cannot be 0")
+	for _, fn := range fns {
+		if err == nil {
+			err = fn(opts)
+		}
 	}
 
-	conn, err := redis.Dial("tcp", net.JoinHostPort(opts.Host, strconv.Itoa(opts.Port)))
 	if err != nil {
-		return stats, keys, fmt.Errorf("Error connecting to the redis instance at: %s:%d : %s", opts.Host, opts.Port, err.Error())
+		return stats, keys, err
+	}
+
+	pool := newConnectionPool(net.JoinHostPort(opts.Host, strconv.Itoa(opts.Port)))
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	if err = conn.Err(); err != nil {
+		return stats, keys, fmt.Errorf("Error connecting to the redis instance at: %s:%d : %s", opts.Host, opts.Port, err)
 	}
 
 	numSamples := opts.MinSamples
@@ -321,41 +502,99 @@ func Run(opts Options, aggregator Aggregator) (map[string]*Results, int64, error
 	}
 	lastInterval := 0
 
-	for i := 0; i < numSamples; i++ {
-		key, vt, err := randomKey(conn)
-		if err != nil {
+	interval = 100
+	quit := make(chan struct{})
+
+	var results chan *keyResult
+	if opts.scanMode {
+		results, err = scan(pool, opts.Glob, quit)
+	} else {
+		results, err = sample(pool, quit)
+	}
+
+	if err != nil {
+		return stats, keys, err
+	}
+
+	// Ensure that the other goroutines exit cleanly by telling them explicitly to quit
+	defer func() {
+		go func() { quit <- struct{}{} }()
+	}()
+
+	observed := 0
+	for {
+		result, ok := <-results
+		if !ok {
+			fmt.Printf("results channel closed; examined %d keys from redis at: %s:%d...\n", observed, opts.Host, opts.Port)
 			return stats, keys, err
 		}
 
-		if i/interval != lastInterval {
-			fmt.Printf("sampled %d keys from redis at: %s:%d...\n", i, opts.Host, opts.Port)
-			lastInterval = i / interval
+		if result.err != nil {
+			fmt.Printf("%#v\n", result.err)
+			return stats, keys, err
 		}
 
-		switch ValueType(vt) {
+		observed++
+		if observed/interval != lastInterval {
+			fmt.Printf("examined %d keys from redis at: %s:%d...\n", observed, opts.Host, opts.Port)
+			lastInterval = observed / interval
+		}
+
+		// Return if we're sampling, and have sampled enough keys
+		if !opts.scanMode && observed == numSamples {
+			return stats, keys, err
+		}
+
+		switch ValueType(result.vt) {
 		case TypeString:
-			if err = sampleString(key, conn, aggregator, stats); err != nil {
+			if err = sampleString(result.key, conn, aggregator, stats); err != nil {
 				return stats, keys, err
 			}
 		case TypeList:
-			if err = sampleList(key, conn, aggregator, stats); err != nil {
+			if err = sampleList(result.key, conn, aggregator, stats); err != nil {
 				return stats, keys, err
 			}
 		case TypeSet:
-			if err = sampleSet(key, conn, aggregator, stats); err != nil {
+			if err = sampleSet(result.key, conn, aggregator, stats); err != nil {
 				return stats, keys, err
 			}
 		case TypeSortedSet:
-			if err = sampleSortedSet(key, conn, aggregator, stats); err != nil {
+			if err = sampleSortedSet(result.key, conn, aggregator, stats); err != nil {
 				return stats, keys, err
 			}
 		case TypeHash:
-			if err = sampleHash(key, conn, aggregator, stats); err != nil {
+			if err = sampleHash(result.key, conn, aggregator, stats); err != nil {
 				return stats, keys, err
 			}
 		default:
-			return stats, keys, fmt.Errorf("unknown type for redis key: %s", key)
+			return stats, keys, fmt.Errorf("unknown type for redis key: %s", result.key)
 		}
 	}
+
 	return stats, keys, nil
+}
+
+// newConnectionPool creates a goroutine-safe connection pool to the redis
+// instance on specified host:port address. Users of the pool are responsible
+// for getting connections from the pool and returning them when done (by
+// calling Close) on the connection.
+func newConnectionPool(address string) *redis.Pool {
+	return &redis.Pool{
+		MaxIdle:     3,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", address)
+			if err != nil {
+				return nil, err
+			}
+			return c, err
+		},
+
+		// Since we've already said that reckon can't run against twemproxy, go
+		// ahead and use the PING cmd
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			_, err := c.Do("PING")
+			return err
+		},
+	}
 }
