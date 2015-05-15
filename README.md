@@ -2,6 +2,8 @@
 
 > A Go package for sampling and reporting on random keys on a set of redis instances
 
+[![GoDoc](https://godoc.org/github.com/zulily/reckon?status.svg)](https://godoc.org/github.com/zulily/reckon)
+
 Inspired/influenced by [redis-sampler](https://github.com/antirez/redis-sampler)
 from [antirez](https://github.com/antirez), the author of redis.
 
