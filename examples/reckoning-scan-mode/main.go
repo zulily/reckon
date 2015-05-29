@@ -70,20 +70,14 @@ type reckonResult struct {
 	err      error
 }
 
-type options struct {
-	redises    Addresses
-	minSamples int
-	sampleRate float64
-}
-
-var (
-	opts options
-)
-
 func main() {
 
-	flag.Float64Var(&opts.sampleRate, "sample-rate", 0.1, "The percentage of the keyspace to sample on each redis")
-	flag.IntVar(&opts.minSamples, "min-samples", 100, "minimum number of keys to sample on each redis")
+	opts := struct {
+		redises Addresses
+		glob    string
+	}{}
+
+	flag.StringVar(&opts.glob, "glob", "*", "The glob expression to use to match scanned redis keys")
 	flag.Var(&opts.redises, "redis", "host:port address of a redis instance to sample (may be specified multiple times)")
 	flag.Parse()
 
@@ -99,10 +93,10 @@ func main() {
 			defer wg.Done()
 
 			hostFn := reckon.WithHostPort(addr.Host, addr.Port)
-			sampleFn := reckon.SampleMode(opts.minSamples, float32(opts.sampleRate))
-			log.Printf("Sampling %d keys from redis at: %s:%d...\n", opts.minSamples, addr.Host, addr.Port)
-			s, keyCount, err := reckon.Run(aggregator, hostFn, sampleFn)
+			modeFn := reckon.ScanMode(opts.glob)
+			s, keyCount, err := reckon.Run(aggregator, hostFn, modeFn)
 			results <- reckonResult{s: s, keyCount: keyCount, err: err}
+
 		}(redis)
 	}
 
